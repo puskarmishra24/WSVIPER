@@ -1,0 +1,12 @@
+{
+  "name": "nexus-social-app",
+  "version": "1.0.0",
+  "description": "Nexus — Social Media App with WebSocket Security Demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  }
+}

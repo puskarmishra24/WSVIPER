@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nexus — Connect & Vibe</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0e0f14;
+  --surface:  #16181f;
+  --card:     #1c1f2a;
+  --border:   #272b38;
+  --text:     #ecedf2;
+  --muted:    #6b7280;
+  --accent:   #6c63ff;
+  --accent2:  #ff6584;
+  --green:    #22d3a0;
+  --yellow:   #fbbf24;
+  --red:      #ef4444;
+  --font:     'Outfit', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── TOP NAV ── */
+nav{display:flex;align-items:center;padding:0 24px;height:56px;background:var(--surface);border-bottom:1px solid var(--border);gap:16px;flex-shrink:0;z-index:50}
+.nav-logo{font-size:20px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-search{flex:1;max-width:320px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:7px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+.nav-search::placeholder{color:var(--muted)}
+.nav-right{display:flex;align-items:center;gap:12px;margin-left:auto}
+.nav-icon{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;position:relative;transition:border-color .2s}
+.nav-icon:hover{border-color:var(--accent)}
+.nav-badge{position:absolute;top:-3px;right:-3px;width:16px;height:16px;background:var(--accent2);border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+.nav-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;cursor:pointer}
+.online-count{font-size:11px;color:var(--green);font-weight:600;display:flex;align-items:center;gap:4px}
+.online-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── MAIN LAYOUT ── */
+.app{display:grid;grid-template-columns:240px 1fr 300px;flex:1;overflow:hidden}
+
+/* ── LEFT SIDEBAR ── */
+.sidebar{border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.sidebar::-webkit-scrollbar{width:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:var(--muted);transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--card);color:var(--text)}
+.nav-item.active{color:var(--accent)}
+.nav-item .icon{font-size:18px;width:24px;text-align:center}
+.sidebar-section{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px;font-weight:600}
+
+/* online users list */
+.online-user{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;cursor:pointer;transition:background .15s}
+.online-user:hover{background:var(--card)}
+.ou-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#ff6584);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;position:relative;flex-shrink:0}
+.ou-dot{position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;background:var(--green);border:1.5px solid var(--bg)}
+.ou-dot.offline{background:var(--muted)}
+.ou-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ou-viewers{font-size:10px;color:var(--muted);margin-left:auto}
+
+/* ── FEED ── */
+.feed{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:0}
+.feed::-webkit-scrollbar{width:4px}
+.feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* story bar */
+.stories{display:flex;gap:12px;padding-bottom:20px;overflow-x:auto;flex-shrink:0}
+.stories::-webkit-scrollbar{height:0}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;flex-shrink:0}
+.story-ring{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));padding:2px;transition:transform .2s}
+.story-ring:hover{transform:scale(1.07)}
+.story-inner{width:100%;height:100%;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:20px}
+.story-name{font-size:10px;color:var(--muted)}
+
+/* compose box */
+.compose{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
+.compose-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.compose-right{flex:1;display:flex;flex-direction:column;gap:10px}
+.compose-input{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:var(--font);font-size:14px;resize:none;outline:none;width:100%;transition:border-color .2s}
+.compose-input:focus{border-color:var(--accent)}
+.compose-actions{display:flex;align-items:center;gap:8px}
+.compose-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity .2s}
+.compose-btn:hover{opacity:.85}
+.compose-emoji{background:none;border:none;font-size:18px;cursor:pointer;padding:4px}
+
+/* post card */
+.post{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;animation:slideIn .3s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.post-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.post-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff6584,#6c63ff);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.post-meta{flex:1}
+.post-name{font-size:14px;font-weight:600}
+.post-time{font-size:11px;color:var(--muted)}
+.post-live{font-size:10px;background:var(--accent2)20;color:var(--accent2);padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid var(--accent2)40}
+.post-text{font-size:14px;line-height:1.6;margin-bottom:12px;color:#d1d5db}
+.post-img{background:linear-gradient(135deg,var(--surface),var(--card));border-radius:10px;height:160px;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:12px}
+.post-actions{display:flex;gap:16px}
+.post-action{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;transition:color .15s;background:none;border:none;font-family:var(--font)}
+.post-action:hover{color:var(--accent2)}
+.post-action.liked{color:var(--accent2)}
+.post-action .cnt{font-size:13px;font-weight:600}
+
+/* WS badge on posts */
+.ws-tag{font-size:9px;padding:2px 6px;border-radius:4px;font-family:var(--mono);margin-left:auto;opacity:.6}
+.ws-secure{background:#22d3a015;color:var(--green);border:1px solid var(--green)30}
+.ws-minor {background:#fbbf2415;color:var(--yellow);border:1px solid var(--yellow)30}
+.ws-major {background:#ef444415;color:var(--red);border:1px solid var(--red)30}
+
+/* ── RIGHT PANEL ── */
+.right-panel{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:12px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.ptab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+/* CHAT panel */
+.chat-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.chat-conn{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s;flex-shrink:0}
+.chat-conn.on{background:var(--green);box-shadow:0 0 6px var(--green)80}
+.chat-conn.err{background:var(--red)}
+.chat-auth{padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chat-auth-title{font-size:11px;color:var(--muted);font-weight:600}
+.chat-token-select{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:100%}
+.chat-token-select option{background:var(--card)}
+.auth-btn{background:var(--green);color:#000;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);width:100%}
+.messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.messages::-webkit-scrollbar{width:3px}
+.messages::-webkit-scrollbar-thumb{background:var(--border)}
+.msg-bubble{max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.msg-mine{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg-other{background:var(--card);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--border)}
+.msg-system{background:none;color:var(--muted);font-size:11px;text-align:center;align-self:center;font-style:italic}
+.msg-from{font-size:10px;color:var(--muted);margin-bottom:2px}
+.typing-indicator{font-size:11px;color:var(--muted);font-style:italic;padding:0 16px 4px;flex-shrink:0;min-height:18px}
+.chat-input-row{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.chat-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:8px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+.chat-input:focus{border-color:var(--accent)}
+.chat-send{background:var(--accent);color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+
+/* PRICES panel */
+.prices-panel{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px}
+.price-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.price-coin{font-size:14px;font-weight:700}
+.price-badge{font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:4px}
+.price-val{font-size:20px;font-weight:800;font-family:var(--mono)}
+.price-change{font-size:11px;color:var(--green)}
+.price-change.down{color:var(--red)}
+.price-flash{animation:flash .4s ease}
+@keyframes flash{0%,100%{background:var(--card)}50%{background:var(--accent)18}}
+
+/* NOTIFICATIONS panel */
+.notif-panel{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.notif-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;animation:slideIn .3s ease}
+.notif-icon{font-size:18px;flex-shrink:0}
+.notif-text{font-size:12px;line-height:1.5;flex:1}
+.notif-time{font-size:10px;color:var(--muted);margin-top:2px}
+.notif-source{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--mono);display:inline-block;margin-top:3px}
+.notif-source.server{background:var(--green)15;color:var(--green)}
+.notif-source.client{background:var(--yellow)15;color:var(--yellow)}
+.notif-push{padding:10px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.notif-push-title{font-size:10px;color:var(--yellow);font-weight:600;display:flex;align-items:center;gap:4px}
+.notif-input{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:100%}
+.notif-send{background:var(--yellow);color:#000;border:none;border-radius:8px;padding:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);width:100%}
+
+/* COMMENTS overlay */
+.comments-overlay{display:none;position:fixed;inset:0;background:#00000080;z-index:200;align-items:flex-end;justify-content:center}
+.comments-overlay.open{display:flex}
+.comments-sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:560px;height:70vh;display:flex;flex-direction:column;border:1px solid var(--border);border-bottom:none}
+.comments-top{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.comments-title{font-size:15px;font-weight:700}
+.comments-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+.comments-list{flex:1;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:10px}
+.comment-item{display:flex;gap:10px}
+.comment-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.comment-body{flex:1}
+.comment-name{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.comment-role{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--accent)20;color:var(--accent)}
+.comment-role.admin{background:var(--accent2)20;color:var(--accent2)}
+.comment-text{font-size:13px;color:#d1d5db;margin-top:2px;line-height:1.5}
+.comments-input-row{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.comments-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:8px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none}
+.comments-send{background:var(--accent);color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.profile-escalate{margin:0 20px 8px;background:var(--accent2)15;border:1px solid var(--accent2)40;border-radius:8px;padding:8px 12px;font-size:11px;color:var(--accent2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.escalate-btn{background:var(--accent2);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer}
+
+/* Security info popups */
+.sec-info{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:12px;z-index:300;opacity:0;transition:opacity .3s;max-width:400px;text-align:center;pointer-events:none}
+.sec-info.show{opacity:1}
+
+/* Toast notifications */
+.toast-stack{position:fixed;top:70px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:400}
+.toast{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;min-width:220px;display:flex;align-items:center;gap:8px;animation:toastIn .3s ease;box-shadow:0 4px 20px #00000040}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.toast.removing{animation:toastOut .3s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translateX(40px)}}
+
+/* Security panel at bottom of sidebar */
+.sec-panel{margin-top:auto;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:11px}
+.sec-panel-title{font-weight:700;margin-bottom:8px;color:var(--muted);letter-spacing:.5px}
+.sec-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px;color:var(--muted)}
+.sec-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav>
+  <div class="nav-logo">Nexus</div>
+  <input class="nav-search" placeholder="🔍  Search Nexus…"/>
+  <div class="nav-right">
+    <div class="online-count"><span class="online-dot"></span><span id="onlineCount">0 online</span></div>
+    <div class="nav-icon" id="notifBell">🔔<span class="nav-badge" id="notifBadge">0</span></div>
+    <div class="nav-avatar">Y</div>
+  </div>
+</nav>
+
+<div class="app">
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="nav-item active"><span class="icon">🏠</span> Home</div>
+    <div class="nav-item"><span class="icon">🔍</span> Explore</div>
+    <div class="nav-item"><span class="icon">💬</span> Messages</div>
+    <div class="nav-item"><span class="icon">🔔</span> Notifications</div>
+    <div class="nav-item"><span class="icon">👤</span> Profile</div>
+    <div class="nav-item"><span class="icon">⚙️</span> Settings</div>
+
+    <div class="sidebar-section">Online Now</div>
+    <div id="onlineList"></div>
+
+    <!-- Security status at bottom -->
+    <div class="sec-panel">
+      <div class="sec-panel-title">WS CONNECTIONS</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-chat"></span>/ws/chat — DM</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-presence"></span>/ws/presence — Online</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-feed"></span>/ws/feed — Posts</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-notify"></span>/ws/notify — Alerts</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-prices"></span>/ws/prices — Prices</div>
+      <div class="sec-row"><span class="sec-dot" style="background:var(--muted)" id="dot-comments"></span>/ws/comments — Comments</div>
+    </div>
+  </aside>
+
+  <!-- MAIN FEED -->
+  <main class="feed" id="feed">
+    <!-- Stories -->
+    <div class="stories" id="stories">
+      <div class="story"><div class="story-ring"><div class="story-inner">➕</div></div><div class="story-name">Your Story</div></div>
+      <div class="story"><div class="story-ring"><div class="story-inner">👩</div></div><div class="story-name">alice</div></div>
+      <div class="story"><div class="story-ring"><div class="story-inner">👨</div></div><div class="story-name">bob</div></div>
+      <div class="story"><div class="story-ring"><div class="story-inner">🧑</div></div><div class="story-name">carol</div></div>
+      <div class="story"><div class="story-ring"><div class="story-inner">👦</div></div><div class="story-name">dave</div></div>
+    </div>
+
+    <!-- Compose -->
+    <div class="compose">
+      <div class="compose-avatar">Y</div>
+      <div class="compose-right">
+        <textarea class="compose-input" rows="2" id="composeText" placeholder="What's on your mind? (posts via /ws/feed ⚠️)"></textarea>
+        <div class="compose-actions">
+          <button class="compose-emoji">📷</button>
+          <button class="compose-emoji">🎵</button>
+          <button class="compose-emoji">😊</button>
+          <button class="compose-btn" onclick="submitPost()">Post</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Posts injected here -->
+    <div id="posts"></div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    <div class="panel-tabs">
+      <div class="ptab active" onclick="switchPanel('chat',this)">💬 Chat</div>
+      <div class="ptab" onclick="switchPanel('prices',this)">📈 Prices</div>
+      <div class="ptab" onclick="switchPanel('notifs',this)">🔔 Alerts</div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat-panel" id="panel-chat">
+      <div class="chat-header">
+        <span class="chat-conn" id="chat-conn"></span>
+        <span id="chat-status">Not connected</span>
+        <span class="ws-tag ws-secure" style="margin-left:auto;opacity:1">/ws/chat 🔒</span>
+      </div>
+      <div class="chat-auth" id="chatAuth">
+        <div class="chat-auth-title">🔒 TOKEN AUTH REQUIRED</div>
+        <select class="chat-token-select" id="tokenSelect">
+          <option value="token_alice_9f3k2">Alice  •  token_alice_9f3k2</option>
+          <option value="token_bob_m7x91">Bob  •  token_bob_m7x91</option>
+          <option value="token_guest_demo">Guest  •  token_guest_demo</option>
+          <option value="bad_token">❌ Invalid Token</option>
+        </select>
+        <input class="chat-token-select" id="usernameInput" placeholder="Display name (optional)" style="margin-top:4px"/>
+        <button class="auth-btn" onclick="connectChat()">Connect to Chat</button>
+      </div>
+      <div class="messages" id="messages"></div>
+      <div class="typing-indicator" id="typingIndicator"></div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendChat()" oninput="sendTyping()"/>
+        <button class="chat-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+
+    <!-- PRICES -->
+    <div class="prices-panel" id="panel-prices" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted)">LIVE PRICES</span>
+        <span class="ws-tag ws-major" style="opacity:1">/ws/prices 🚨</span>
+      </div>
+      <div id="priceCards"></div>
+      <div style="background:var(--card);border:1px solid var(--red)40;border-radius:10px;padding:12px;margin-top:8px">
+        <div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">⚠️ VULN: eval() Calculator</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">This input runs on the server via eval():</div>
+        <input class="chat-token-select" id="calcInput" placeholder="e.g.  2+2  or  process.version" style="margin-bottom:6px"/>
+        <button class="auth-btn" style="background:var(--red);color:#fff" onclick="runCalc()">Run on Server</button>
+        <div id="calcResult" style="font-family:var(--mono);font-size:11px;color:var(--green);margin-top:8px;word-break:break-all"></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div style="display:none;flex-direction:column;flex:1;overflow:hidden" id="panel-notifs">
+      <div class="notif-panel" id="notifList"></div>
+      <div class="notif-push">
+        <div class="notif-push-title">⚠️ /ws/notify — Push as ANY user</div>
+        <input class="notif-input" id="notifText" placeholder="Notification text to push to everyone…"/>
+        <button class="notif-send" onclick="pushNotif()">📢 Push to All Users</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- COMMENTS OVERLAY -->
+<div class="comments-overlay" id="commentsOverlay" onclick="if(event.target===this)closeComments()">
+  <div class="comments-sheet">
+    <div class="comments-top">
+      <span class="comments-title">💬 Comments <span class="ws-tag ws-major" style="opacity:1">/ws/comments 🚨</span></span>
+      <button class="comments-close" onclick="closeComments()">✕</button>
+    </div>
+    <div class="profile-escalate" id="roleBar">
+      <span>Your role: <strong id="myRole">guest</strong></span>
+      <button class="escalate-btn" onclick="escalateRole()">⬆ Escalate to Admin</button>
+    </div>
+    <div class="comments-list" id="commentsList"></div>
+    <div class="comments-input-row">
+      <input class="comments-input" id="commentInput" placeholder="Write a comment… (XSS not sanitized 🚨)" onkeydown="if(event.key==='Enter')sendComment()"/>
+      <button class="comments-send" onclick="sendComment()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast stack -->
+<div class="toast-stack" id="toastStack"></div>
+
+<!-- Security info popup -->
+<div class="sec-info" id="secInfo"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let chatWs = null, feedWs = null, presenceWs = null, notifyWs = null, pricesWs = null, commentsWs = null;
+let myUsername = "You";
+let myRole = "guest";
+let notifCount = 0;
+let typingTimer = null;
+let currentPostId = null;
+
+const onlineUsers = {};  // username → { online, viewers }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PANEL SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════════
+function switchPanel(name, btn) {
+  document.querySelectorAll(".ptab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  ["chat","prices","notifs"].forEach(p => {
+    const el = document.getElementById(`panel-${p}`);
+    if (el) el.style.display = p === name ? (p === "notifs" ? "flex" : p === "chat" ? "flex" : "flex") : "none";
+  });
+  // fix flex direction for notifs
+  const n = document.getElementById("panel-notifs");
+  if (n) n.style.display = name === "notifs" ? "flex" : "none";
+  const c = document.getElementById("panel-chat");
+  if (c) c.style.display = name === "chat" ? "flex" : "none";
+  const pr = document.getElementById("panel-prices");
+  if (pr) pr.style.display = name === "prices" ? "flex" : "none";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 /ws/chat — SECURE DM CHAT
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectChat() {
+  if (chatWs) { chatWs.close(); return; }
+  const token = document.getElementById("tokenSelect").value;
+  const uname = document.getElementById("usernameInput").value.trim() || "User";
+  chatWs = new WebSocket("ws://localhost:3000/ws/chat");
+  setDot("chat","connecting");
+
+  chatWs.onopen = () => {
+    setDot("chat","on");
+    document.getElementById("chat-status").textContent = "Connected · Authenticating…";
+    chatWs.send(JSON.stringify({ type:"auth", token, username: uname }));
+  };
+  chatWs.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "auth_ok") {
+      myUsername = msg.username;
+      document.getElementById("chat-status").textContent = `${myUsername} · 🔒 Secure`;
+      document.getElementById("chatAuth").style.display = "none";
+      addMessage("system", null, `Authenticated as ${myUsername}`);
+    } else if (msg.type === "message") {
+      addMessage(msg.from === myUsername ? "mine" : "other", msg.from, msg.text);
+    } else if (msg.type === "typing" && msg.from !== myUsername) {
+      showTyping(msg.from);
+    } else if (msg.type === "presence") {
+      showToast(msg.online ? "👋" : "👋", `${msg.username} ${msg.online ? "joined" : "left"} chat`);
+    } else if (msg.type === "error") {
+      addMessage("system", null, "⚠️ " + msg.text);
+    }
+  };
+  chatWs.onerror = () => setDot("chat","err");
+  chatWs.onclose = () => { setDot("chat","off"); document.getElementById("chat-status").textContent = "Disconnected"; chatWs = null; };
+}
+
+function sendChat() {
+  if (!chatWs || chatWs.readyState !== 1) { showToast("🔒","Connect to chat first!"); return; }
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  chatWs.send(JSON.stringify({ type:"message", text }));
+  input.value = "";
+}
+
+function sendTyping() {
+  if (!chatWs || chatWs.readyState !== 1) return;
+  clearTimeout(typingTimer);
+  chatWs.send(JSON.stringify({ type:"typing" }));
+}
+
+function addMessage(type, from, text) {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  if (type === "system") {
+    div.className = "msg-bubble msg-system";
+    div.textContent = text;
+  } else if (type === "mine") {
+    div.className = "msg-bubble msg-mine";
+    div.textContent = text;
+  } else {
+    div.innerHTML = `<div class="msg-from">${from}</div><div>${text}</div>`;
+    div.className = "msg-bubble msg-other";
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+let typingTimeout;
+function showTyping(user) {
+  const el = document.getElementById("typingIndicator");
+  el.textContent = `${user} is typing…`;
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => el.textContent = "", 2000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🔒 /ws/presence — SECURE ONLINE PRESENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectPresence() {
+  presenceWs = new WebSocket("ws://localhost:3000/ws/presence");
+  setDot("presence","connecting");
+  presenceWs.onopen = () => { setDot("presence","on"); };
+  presenceWs.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "welcome") {
+      msg.users.forEach(u => { onlineUsers[u] = { online: false, viewers: 0 }; });
+      renderOnlineList();
+    }
+    if (msg.type === "presence_update") {
+      onlineUsers[msg.username] = { online: msg.online, viewers: msg.viewers };
+      renderOnlineList();
+      const online = Object.values(onlineUsers).filter(u => u.online).length;
+      document.getElementById("onlineCount").textContent = `${online} online`;
+    }
+  };
+  presenceWs.onerror = () => setDot("presence","err");
+  presenceWs.onclose = () => setDot("presence","off");
+}
+
+function renderOnlineList() {
+  const el = document.getElementById("onlineList");
+  el.innerHTML = "";
+  Object.entries(onlineUsers).forEach(([name, data]) => {
+    const div = document.createElement("div");
+    div.className = "online-user";
+    div.innerHTML = `
+      <div class="ou-avatar">${name[0].toUpperCase()}<span class="ou-dot ${data.online ? "" : "offline"}"></span></div>
+      <span class="ou-name">${name}</span>
+      ${data.online ? `<span class="ou-viewers">👁 ${data.viewers}</span>` : ""}
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠️ /ws/feed — LIVE POST FEED (Minor Issues)
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectFeed() {
+  feedWs = new WebSocket("ws://localhost:3000/ws/feed");
+  setDot("feed","connecting");
+  feedWs.onopen = () => setDot("feed","on");
+  feedWs.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "new_post") renderPost(msg.post);
+    if (msg.type === "like_update") updateLikes(msg.postId, msg.likes);
+  };
+  feedWs.onerror = () => setDot("feed","err");
+  feedWs.onclose = () => setDot("feed","off");
+}
+
+function renderPost(post) {
+  const posts = document.getElementById("posts");
+  const div = document.createElement("div");
+  div.className = "post";
+  div.id = `post-${post.id}`;
+  div.innerHTML = `
+    <div class="post-header">
+      <div class="post-avatar">${post.user[0].toUpperCase()}</div>
+      <div class="post-meta">
+        <div class="post-name">${post.user}</div>
+        <div class="post-time">${new Date(post.ts||Date.now()).toLocaleTimeString()}</div>
+      </div>
+      <span class="post-live">LIVE</span>
+      <span class="ws-tag ws-minor">/ws/feed ⚠️</span>
+    </div>
+    ${post.text ? `<div class="post-text">${post.text}</div>` : ""}
+    ${post.img ? `<div class="post-img">${post.img}</div>` : ""}
+    <div class="post-actions">
+      <button class="post-action" onclick="likePost('${post.id}',this)">❤️ <span class="cnt">${post.likes||0}</span></button>
+      <button class="post-action" onclick="openComments('${post.id}')">💬 Comments</button>
+      <button class="post-action">🔁 Share</button>
+    </div>
+  `;
+  posts.insertBefore(div, posts.firstChild);
+  // Keep max 20 posts
+  while (posts.children.length > 20) posts.removeChild(posts.lastChild);
+}
+
+function likePost(id, btn) {
+  btn.classList.toggle("liked");
+  const cnt = btn.querySelector(".cnt");
+  const newLikes = parseInt(cnt.textContent) + (btn.classList.contains("liked") ? 1 : -1);
+  cnt.textContent = newLikes;
+  if (feedWs && feedWs.readyState === 1)
+    feedWs.send(JSON.stringify({ type:"like", postId: id, likes: newLikes }));
+}
+
+function updateLikes(id, likes) {
+  const post = document.getElementById(`post-${id}`);
+  if (post) {
+    const cnt = post.querySelector(".cnt");
+    if (cnt) cnt.textContent = likes;
+  }
+}
+
+function submitPost() {
+  const text = document.getElementById("composeText").value.trim();
+  if (!text) return;
+  if (feedWs && feedWs.readyState === 1) {
+    feedWs.send(JSON.stringify({ type:"post", username: myUsername, text }));
+    document.getElementById("composeText").value = "";
+    showToast("⚠️", "Posted via /ws/feed — no auth check!");
+  } else {
+    showToast("❌","Feed not connected");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠️ /ws/notify — PUSH NOTIFICATIONS (Minor Issues)
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectNotify() {
+  notifyWs = new WebSocket("ws://localhost:3000/ws/notify");
+  setDot("notify","connecting");
+  notifyWs.onopen = () => setDot("notify","on");
+  notifyWs.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "notification") {
+      addNotif(msg);
+      showToast(msg.icon, msg.text, msg.source === "client" ? "yellow" : null);
+      notifCount++;
+      document.getElementById("notifBadge").textContent = notifCount > 9 ? "9+" : notifCount;
+    }
+  };
+  notifyWs.onerror = () => setDot("notify","err");
+  notifyWs.onclose = () => setDot("notify","off");
+}
+
+function addNotif(msg) {
+  const list = document.getElementById("notifList");
+  const div = document.createElement("div");
+  div.className = "notif-item";
+  div.innerHTML = `
+    <span class="notif-icon">${msg.icon||"🔔"}</span>
+    <div>
+      <div class="notif-text">${msg.text}</div>
+      <div class="notif-time">${new Date().toLocaleTimeString()}</div>
+      <span class="notif-source ${msg.source}">${msg.source==="client" ? "⚠️ from client" : "✅ from server"}</span>
+    </div>
+  `;
+  list.insertBefore(div, list.firstChild);
+}
+
+function pushNotif() {
+  const text = document.getElementById("notifText").value.trim();
+  if (!text) return;
+  if (notifyWs && notifyWs.readyState === 1) {
+    notifyWs.send(JSON.stringify({ type:"push", icon:"📢", text }));
+    document.getElementById("notifText").value = "";
+  } else {
+    showToast("❌","Notifications not connected");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🚨 /ws/prices — LIVE PRICES + RCE (Critical)
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectPrices() {
+  pricesWs = new WebSocket("ws://localhost:3000/ws/prices");
+  setDot("prices","connecting");
+  pricesWs.onopen = () => setDot("prices","on");
+  pricesWs.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "welcome") {
+      renderPrices(msg.prices);
+      if (msg.env && Object.keys(msg.env).length > 0)
+        showToast("🚨", `Server leaked ${Object.keys(msg.env).length} env vars on connect!`, "red");
+    }
+    if (msg.type === "price_update") renderPrices(msg.prices);
+    if (msg.type === "calc_result") {
+      document.getElementById("calcResult").textContent = `▶ ${msg.expression} = ${msg.result}`;
+      showToast("🚨","Server eval() returned: " + msg.result, "red");
+    }
+  };
+  pricesWs.onerror = () => setDot("prices","err");
+  pricesWs.onclose = () => setDot("prices","off");
+}
+
+const prevPrices = {};
+function renderPrices(prices) {
+  const container = document.getElementById("priceCards");
+  const coins = { BTC:"₿ Bitcoin", ETH:"Ξ Ethereum", SOL:"◎ Solana", NEXUS:"✦ Nexus" };
+  Object.entries(prices).forEach(([coin, price]) => {
+    let card = document.getElementById(`price-${coin}`);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "price-card";
+      card.id = `price-${coin}`;
+      container.appendChild(card);
+    }
+    const prev = prevPrices[coin] || price;
+    const change = (((price - prev) / prev) * 100).toFixed(3);
+    const up = price >= prev;
+    card.className = "price-card price-flash";
+    card.innerHTML = `
+      <div class="price-header">
+        <span class="price-coin">${coins[coin]||coin}</span>
+        <span class="ws-tag ws-major" style="opacity:1">/ws/prices 🚨</span>
+      </div>
+      <div class="price-val">$${Number(price).toLocaleString()}</div>
+      <div class="price-change ${up?'':'down'}">${up?'▲':'▼'} ${Math.abs(change)}%</div>
+    `;
+    prevPrices[coin] = price;
+    setTimeout(() => card.className = "price-card", 400);
+  });
+}
+
+function runCalc() {
+  const expr = document.getElementById("calcInput").value.trim();
+  if (!expr) return;
+  if (pricesWs && pricesWs.readyState === 1) {
+    pricesWs.send(JSON.stringify({ type:"calculate", expression: expr }));
+  } else {
+    showToast("❌","Prices feed not connected");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 🚨 /ws/comments — COMMENTS (Critical — Mass Assignment + XSS)
+// ═══════════════════════════════════════════════════════════════════════════════
+function connectComments() {
+  if (commentsWs) return;
+  commentsWs = new WebSocket("ws://localhost:3000/ws/comments");
+  setDot("comments","connecting");
+  commentsWs.onopen = () => { setDot("comments","on"); };
+  commentsWs.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "session") {
+        myRole = msg.session.role;
+        document.getElementById("myRole").textContent = myRole;
+      }
+      if (msg.type === "profile_updated") {
+        myRole = msg.session.role;
+        document.getElementById("myRole").textContent = myRole;
+        showToast("🚨", `Role changed to: ${myRole} (mass assignment!)`, "red");
+      }
+      if (msg.type === "new_comment" || msg.type === "comment_posted") {
+        const text = msg.text || "";
+        const role = msg.role || "guest";
+        const user = msg.username || "anon";
+        addComment(user, role, text);
+      }
+    } catch {}
+  };
+  commentsWs.onerror = () => setDot("comments","err");
+  commentsWs.onclose = () => { setDot("comments","off"); commentsWs = null; };
+}
+
+function openComments(postId) {
+  currentPostId = postId;
+  document.getElementById("commentsOverlay").classList.add("open");
+  connectComments();
+  if (commentsWs && commentsWs.readyState === 1)
+    commentsWs.send(JSON.stringify({ type:"get_comments" }));
+}
+
+function closeComments() {
+  document.getElementById("commentsOverlay").classList.remove("open");
+}
+
+function addComment(user, role, text) {
+  const list = document.getElementById("commentsList");
+  const div = document.createElement("div");
+  div.className = "comment-item";
+  // 🚨 innerHTML used here — XSS payload from server reflected directly
+  div.innerHTML = `
+    <div class="comment-ava">${user[0]?.toUpperCase()||"?"}</div>
+    <div class="comment-body">
+      <div class="comment-name">${user} <span class="comment-role ${role==="admin"?"admin":""}">${role}</span></div>
+      <div class="comment-text">${text}</div>
+    </div>
+  `;
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+
+function sendComment() {
+  const input = document.getElementById("commentInput");
+  const text = input.value.trim();
+  if (!text || !commentsWs || commentsWs.readyState !== 1) return;
+  commentsWs.send(JSON.stringify({ type:"comment", text }));
+  input.value = "";
+}
+
+function escalateRole() {
+  if (!commentsWs || commentsWs.readyState !== 1) {
+    showToast("❌","Open a post's comments first");
+    return;
+  }
+  // 🚨 Mass assignment — overwrite role to admin
+  commentsWs.send(JSON.stringify({ type:"set_profile", data:{ role:"admin", verified:true, username:"hacker" } }));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function setDot(name, state) {
+  const dot = document.getElementById(`dot-${name}`);
+  if (!dot) return;
+  const colors = { on:"var(--green)", connecting:"var(--yellow)", err:"var(--red)", off:"var(--muted)" };
+  dot.style.background = colors[state] || colors.off;
+}
+
+function showToast(icon, text, color) {
+  const stack = document.getElementById("toastStack");
+  const div = document.createElement("div");
+  div.className = "toast";
+  if (color === "red") div.style.borderColor = "var(--red)";
+  if (color === "yellow") div.style.borderColor = "var(--yellow)";
+  div.innerHTML = `<span style="font-size:18px">${icon}</span><span style="font-size:13px">${text}</span>`;
+  stack.appendChild(div);
+  setTimeout(() => {
+    div.classList.add("removing");
+    setTimeout(() => div.remove(), 300);
+  }, 4000);
+  // Keep max 4 toasts
+  while (stack.children.length > 4) stack.removeChild(stack.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT — connect all sockets on page load
+// ═══════════════════════════════════════════════════════════════════════════════
+window.addEventListener("load", () => {
+  connectPresence();
+  connectFeed();
+  connectNotify();
+  connectPrices();
+  // Chat connects on button click (needs auth)
+  // Comments connects when user opens a post
+
+  showToast("✅","Nexus loaded — 5 WS connections active");
+});
+</script>
+</body>
+</html>
