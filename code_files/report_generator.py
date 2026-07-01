@@ -14,6 +14,11 @@ from html import escape
 from reportlab.graphics.charts.piecharts import Pie
 import math
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+REPORTS_DIR = os.path.join(PROJECT_ROOT, "reports")
+PHOTOS_DIR = os.path.join(PROJECT_ROOT, "photos")
+
 def create_wrapped_cell(text, width=60):
     """Helper function to wrap and escape text in table cells"""
     if text is None:
@@ -114,56 +119,6 @@ def create_bar_chart(data, width=380, height=250, title="", categories=None, col
 from reportlab.graphics.charts.textlabels import Label
 from reportlab.graphics.shapes import Rect, Drawing, String
 
-def create_heatmap(data_dict, width=500, height_per_row=20):
-    """
-    Create a horizontal heatmap based on website-wise vulnerability counts.
-    `data_dict` format: {site1: {"High": x, "Medium": y, "Low": z}, ...}
-    """
-    websites = list(data_dict.keys())
-    severities = ["High", "Medium", "Low"]
-    color_map = {"High": colors.red, "Medium": colors.orange, "Low": colors.green}
-
-    max_val = max([count for site in data_dict.values() for count in site.values()], default=1)
-    
-    cell_width = 40
-    cell_height = height_per_row
-    padding = 10
-    title_height = 20
-
-    total_width = padding * 4 + cell_width * len(severities) + 150  # space for labels
-    total_height = title_height + (cell_height + padding) * len(websites) + padding
-
-    drawing = Drawing(total_width, total_height)
-
-    # Column Headers
-    for idx, sev in enumerate(severities):
-        drawing.add(String(150 + idx * cell_width + padding, total_height - title_height - 5, sev, fontSize=8))
-
-    # Draw heatmap cells
-    for row_idx, site in enumerate(websites):
-        y = total_height - title_height - (row_idx + 1) * (cell_height + padding)
-
-        # Site name
-        drawing.add(String(5, y + 5, site[:25], fontSize=7))
-
-        for col_idx, sev in enumerate(severities):
-            count = data_dict[site].get(sev, 0)
-            intensity = min(1.0, count / max_val if max_val!=0 else 0)
-            color = color_map[sev]
-
-            # Adjust color intensity
-            fill = colors.Color(
-                color.red * intensity,
-                color.green * intensity,
-                color.blue * intensity
-            )
-            x = 150 + col_idx * cell_width
-            drawing.add(Rect(x, y, cell_width - 2, cell_height, fillColor=fill, strokeColor=colors.black))
-
-            # Add count inside
-            drawing.add(String(x + (cell_width / 2) - 2, y + 5, str(count), fontSize=6, textAnchor='middle'))
-
-    return drawing
 
 def flatten_vuln_list(vuln_list):
     """Flattens a list that may contain nested lists of vulnerability dicts."""
@@ -174,6 +129,50 @@ def flatten_vuln_list(vuln_list):
         elif isinstance(item, list):
             flat.extend([v for v in item if isinstance(v, dict)])
     return flat
+
+
+def add_vulnerability_block(elements, vuln, styles):
+    """Append one vulnerability in a layout that can split cleanly across pages."""
+    name = escape(str(vuln.get('name', 'Unknown')))
+    risk = escape(str(vuln.get('risk', 'Unknown')))
+    description = escape(str(vuln.get('description', '')))
+    solution = escape(str(vuln.get('solution', '')))
+
+    risk_color = colors.red if vuln.get('risk') == 'High' else \
+        colors.orange if vuln.get('risk') == 'Medium' else \
+        colors.green if vuln.get('risk') == 'Low' else colors.black
+
+    heading_style = ParagraphStyle(
+        'VulnHeading',
+        parent=styles['Heading4'],
+        fontSize=11,
+        leading=13,
+        textColor=colors.white,
+        backColor=risk_color,
+        spaceBefore=6,
+        spaceAfter=4,
+        leftIndent=0,
+        rightIndent=0,
+        borderPadding=(4, 4, 4)
+    )
+
+    body_style = ParagraphStyle(
+        'VulnBody',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=12,
+        spaceAfter=4,
+        allowWidows=1,
+        allowOrphans=1,
+    )
+
+    elements.append(Paragraph(name, heading_style))
+    elements.append(Paragraph(f"<b>Risk Level:</b> {risk}", body_style))
+    if description:
+        elements.append(Paragraph(f"<b>Description:</b> {description}", body_style))
+    if solution:
+        elements.append(Paragraph(f"<b>Solution:</b> {solution}", body_style))
+    elements.append(Spacer(1, 0.12 * inch))
 
 ATTACK_LIST = [
     # 1. Handshake & Protocol Validation (1–22)
@@ -297,9 +296,11 @@ def create_detailed_heatmap(combined_results, cell_width=5, cell_height=5, paddi
     missing_color = colors.black   # not run
 
     grouped_rows = {}
+    websocket_list = []
 
     for site, details in combined_results.get("detailed_results", {}).items():
         grouped_rows[site] = []
+        websocket_list.extend(details.get("websocket_urls", ""))
         for vuln_list in details.get("vulnerabilities", {}).values():
             flat = flatten_vuln_list(vuln_list)
             risk_map = {}
@@ -320,16 +321,16 @@ def create_detailed_heatmap(combined_results, cell_width=5, cell_height=5, paddi
     for idx, name in enumerate(ATTACK_LIST):
         x = 3 + idx * (5)
         drawing.add(String(74+x, total_height-6, f"{idx+1}", fontSize=4, textAnchor="middle"))
-
     row_idx = 0
     for site, ws_risks in grouped_rows.items():
         y = total_height - (row_idx + 2) * (cell_height + padding)
         if ws_risks == []:
             continue
         # Write website name once
-        drawing.add(String(-5, y + 2, site[:60], fontSize=6))
         for i, risk_map in enumerate(ws_risks):
+
             y = total_height - (row_idx + 2) * (cell_height + padding)
+            drawing.add(String(-20, y, websocket_list[row_idx][:60], fontSize=6))
 
             for attack_name in ATTACK_LIST:
                 x = attack_index[attack_name] * (cell_width)
@@ -468,7 +469,8 @@ def generate_pdf_report(combined_results):
     """Generates a combined PDF report with charts for multiple URLs"""
     try:
         report_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_filename = f"security_scan_report_{report_time}.pdf"
+        os.makedirs(REPORTS_DIR, exist_ok=True)
+        report_filename = os.path.join(REPORTS_DIR, f"WSVIPER_report_{report_time}.pdf")
         
         doc = SimpleDocTemplate(
             report_filename,
@@ -495,7 +497,7 @@ def generate_pdf_report(combined_results):
         # === FRONT PAGE FIXED WITH WARNINGS REMOVED ===
         
         # Paths
-        center_logo_path = "ISFCR.png"
+        center_logo_path = os.path.join(PHOTOS_DIR, "ISFCR.png")
 
         # Load logos
         isfcr_logo = Image(center_logo_path, width=2.5 * inch, height=2.5 * inch) if os.path.exists(center_logo_path) else ""
@@ -780,34 +782,7 @@ def generate_pdf_report(combined_results):
                         risk = vuln.get('risk', 'Unknown')
                         if risk == 'No':
                             continue
-                        bg_color = colors.mistyrose if risk == 'High' else \
-                                colors.lightgoldenrodyellow if risk == 'Medium' else \
-                                colors.lightgreen
-
-                        vuln_data = [
-                            ["Name:", vuln.get('name', 'Unknown')],
-                            ["Risk Level:", risk],
-                            ["Description:", vuln.get('description', '')],
-                            ["Solution:", vuln.get('solution', '')]
-                            # ⛔ Removed affected_url — no longer needed here
-                        ]
-
-                        wrapped_vuln_data = [[create_wrapped_cell(cell, width=50) for cell in row] for row in vuln_data]
-                        vuln_table = Table(wrapped_vuln_data, colWidths=[1.5*inch, 4.5*inch])
-                        vuln_table.setStyle(TableStyle([
-                            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-                            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                            ('FONTSIZE', (0, 0), (-1, -1), 10),
-                            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                            ('TOPPADDING', (0, 0), (-1, -1), 12),
-                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                            ('BACKGROUND', (0, 1), (1, 1), bg_color)
-                        ]))
-
-                        elements.append(vuln_table)
-                        elements.append(Spacer(1, 15))
+                        add_vulnerability_block(elements, vuln, styles)
 
             elements.append(PageBreak())
 
@@ -853,7 +828,7 @@ def draw_header(canvas, doc):
     canvas.setFillColor(colors.orange)
     canvas.rect(0, height - header_height, width, header_height, fill=True, stroke=0)
 
-    pes_logo_path = "header.png"
+    pes_logo_path = os.path.join(PHOTOS_DIR, "header.png")
     if os.path.exists(pes_logo_path):
         canvas.drawImage(
             pes_logo_path,
@@ -872,7 +847,7 @@ def draw_footer(canvas, doc):
     canvas.setFillColor(colors.orange)
     canvas.rect(0, 0, width, footer_height, fill=True, stroke=0)
 
-    isfcr_logo_path = "footer.png"
+    isfcr_logo_path = os.path.join(PHOTOS_DIR, "footer.png")
     logo_x = 40
     logo_y = 5
     logo_w = 50

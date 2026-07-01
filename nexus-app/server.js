@@ -22,8 +22,8 @@ const path   = require("path");
 const crypto = require("crypto");
 const url    = require("url");
 
-// ── Static file server ────────────────────────────────────────────────────────
-const server = http.createServer((req, res) => {
+// ── Static file handler (reused for multiple server instances) ─────────────────
+function handleHttpRequest(req, res) {
   let filePath = path.join(__dirname, "public", req.url === "/" ? "index.html" : req.url);
   const ext   = path.extname(filePath);
   const mime  = { ".html":"text/html", ".css":"text/css", ".js":"application/javascript", ".png":"image/png" };
@@ -32,7 +32,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": mime[ext] || "text/plain" });
     res.end(data);
   });
-});
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const VALID_TOKENS = new Set(["token_alice_9f3k2", "token_bob_m7x91", "token_guest_demo"]);
@@ -59,7 +59,35 @@ function rateOk(ip, limit = 15, windowMs = 10000) {
 
 function broadcast(wss, data) {
   const str = JSON.stringify(data);
-  wss.clients.forEach(c => { if (c.readyState === ws.OPEN) c.send(str); });
+  wss.clients.forEach(c => {
+    if (c.readyState !== ws.OPEN) return;
+    try {
+      c.send(str);
+    } catch {
+      // Keep demo endpoints alive even if one client has already disconnected.
+    }
+  });
+}
+
+function safeSend(socket, payload) {
+  if (!socket || socket.readyState !== ws.OPEN) return;
+  try {
+    socket.send(typeof payload === "string" ? payload : JSON.stringify(payload));
+  } catch {
+    // Swallow send errors so fuzzing does not terminate the demo process.
+  }
+}
+
+const DEMO_VARIANTS = {
+  presence: crypto.randomInt(2),
+  feed: crypto.randomInt(2),
+  notify: crypto.randomInt(2),
+  prices: crypto.randomInt(2),
+  comments: crypto.randomInt(2),
+};
+
+function demoVariant(name) {
+  return DEMO_VARIANTS[name] || 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -75,26 +103,27 @@ wssChat.on("connection", (socket, req) => {
   socket.username  = null;
   socket.sessionId = secureId();
   socket.ip        = getIp(req);
+  socket.on("error", () => {});
 
-  socket.send(JSON.stringify({ type:"system", text:"Send your auth token to begin." }));
+  safeSend(socket, { type:"system", text:"Send your auth token to begin." });
 
   socket.on("message", raw => {
     if (!rateOk(socket.ip)) {
-      socket.send(JSON.stringify({ type:"error", text:"Slow down! Rate limit hit." }));
+      safeSend(socket, { type:"error", text:"Slow down! Rate limit hit." });
       return;
     }
     let msg;
-    try { msg = JSON.parse(raw); } catch { socket.send(JSON.stringify({ type:"error", text:"Bad JSON." })); return; }
+    try { msg = JSON.parse(raw); } catch { safeSend(socket, { type:"error", text:"Bad JSON." }); return; }
 
     if (!socket.authed) {
       if (msg.type === "auth" && VALID_TOKENS.has(msg.token)) {
         socket.authed   = true;
         socket.username = msg.username ? esc(msg.username).slice(0,20) : "User_" + socket.sessionId.slice(0,6);
-        socket.send(JSON.stringify({ type:"auth_ok", username: socket.username, session: socket.sessionId }));
+        safeSend(socket, { type:"auth_ok", username: socket.username, session: socket.sessionId });
         // announce online
         broadcast(wssChat, { type:"presence", username: socket.username, online: true });
       } else {
-        socket.send(JSON.stringify({ type:"error", text:"Invalid token." }));
+        safeSend(socket, { type:"error", text:"Invalid token." });
         socket.close(1008);
       }
       return;
@@ -102,7 +131,7 @@ wssChat.on("connection", (socket, req) => {
 
     if (msg.type === "message") {
       if (typeof msg.text !== "string" || msg.text.length > 400) {
-        socket.send(JSON.stringify({ type:"error", text:"Message too long or invalid." }));
+        safeSend(socket, { type:"error", text:"Message too long or invalid." });
         return;
       }
       // Sanitize before broadcast
@@ -125,7 +154,7 @@ wssChat.on("connection", (socket, req) => {
 //    Origin-locked · read-only broadcast · rejects all client input
 // ═══════════════════════════════════════════════════════════════════════════════
 const wssPresence = new ws.Server({ noServer: true });
-const ALLOWED_ORIGIN = "http://localhost:3000";
+let ALLOWED_ORIGIN = "http://localhost:3000";
 
 // Simulate users coming online/offline
 const DEMO_USERS = ["alice","bob","carol","dave","eve","frank"];
@@ -138,9 +167,16 @@ setInterval(() => {
 }, 3000);
 
 wssPresence.on("connection", (socket) => {
-  socket.send(JSON.stringify({ type:"welcome", message:"Subscribed to presence feed.", users: DEMO_USERS }));
+  const variant = demoVariant("presence");
+  socket.on("error", () => {});
+  safeSend(socket, {
+    type:"welcome",
+    message:"Subscribed to presence feed.",
+    users: variant === 0 ? DEMO_USERS : DEMO_USERS.slice(0, 3),
+    viewers: variant === 0 ? undefined : Math.floor(Math.random() * 30) + 5,
+  });
   socket.on("message", () => {
-    socket.send(JSON.stringify({ type:"error", text:"This is a read-only feed." }));
+    safeSend(socket, { type:"error", text:"This is a read-only feed." });
   });
 });
 
@@ -167,26 +203,39 @@ setInterval(() => {
 }, 4000);
 
 wssFeed.on("connection", (socket, req) => {
+  const variant = demoVariant("feed");
   // ⚠️ Weak non-cryptographic session token
   const weakToken = weakId();
   // ⚠️ Exposes server info on connect
-  socket.send(JSON.stringify({ type:"connected", sessionToken: weakToken, server:"nexus-feed/2.1", nodeVersion: process.version }));
+  socket.on("error", () => {});
+  safeSend(socket, {
+    type:"connected",
+    sessionToken: weakToken,
+    server:"nexus-feed/2.1",
+    nodeVersion: variant === 0 ? process.version : undefined,
+    build: variant === 0 ? "dev" : "dev-lite",
+  });
 
   socket.on("message", raw => {
     // ⚠️ No rate limiting — flood away
     try {
-      const msg = JSON.parse(raw);
-      if (msg.type === "like") {
+      const msg = JSON.parse(Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw));
+      if (msg && msg.type === "like") {
         // ⚠️ No validation — any post ID, any count accepted
         broadcast(wssFeed, { type:"like_update", postId: msg.postId, likes: msg.likes });
       }
-      if (msg.type === "post") {
+      if (msg && msg.type === "post") {
         // ⚠️ No auth, no sanitization, anyone can post
         broadcast(wssFeed, { type:"new_post", post: { user: msg.username || "anonymous", text: msg.text, likes:0, ts: Date.now(), id: Date.now() } });
       }
     } catch(e) {
       // ⚠️ Full stack trace returned to client
-      socket.send(JSON.stringify({ type:"error", message: e.message, stack: e.stack, hint:"Check your JSON syntax" }));
+      safeSend(socket, {
+        type:"error",
+        message: e.message,
+        stack: variant === 0 ? e.stack : undefined,
+        hint:"Check your JSON syntax"
+      });
     }
   });
 });
@@ -211,23 +260,37 @@ setInterval(() => {
 }, 6000);
 
 wssNotify.on("connection", (socket) => {
+  const variant = demoVariant("notify");
   notifyClients.add(socket);
-  socket.send(JSON.stringify({ type:"subscribed", message:"Notification feed active." }));
+  socket.on("error", () => {});
+  safeSend(socket, { type:"subscribed", message:"Notification feed active." });
 
   socket.on("message", raw => {
     try {
-      const msg = JSON.parse(raw);
-      if (msg.type === "push") {
+      const msg = JSON.parse(Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw));
+      if (msg && msg.type === "push") {
         // ⚠️ ANY connected client can push a notification to EVERYONE
         // ⚠️ Text not validated or sanitized
         notifyClients.forEach(c => {
-          if (c.readyState === ws.OPEN)
-            c.send(JSON.stringify({ type:"notification", icon: msg.icon || "📢", text: msg.text, ts: Date.now(), source:"client" }));
+          if (c.readyState === ws.OPEN) {
+            try {
+              c.send(JSON.stringify({
+                type:"notification",
+                icon: msg.icon || "📢",
+                text: msg.text,
+                ts: Date.now(),
+                source: variant === 0 ? "client" : "client-broadcast"
+              }));
+            } catch {
+              // Ignore disconnected clients.
+            }
+          }
         });
       }
       // ⚠️ Unknown types silently swallowed
     } catch {
-      // ⚠️ Silent fail, no error reported
+      // ⚠️ For demo stability, acknowledge malformed JSON instead of closing.
+      safeSend(socket, { type:"error", text:"Bad JSON." });
     }
   });
   socket.on("close", () => notifyClients.delete(socket));
@@ -249,28 +312,35 @@ setInterval(() => {
 }, 2000);
 
 wssPrices.on("connection", (socket) => {
+  const variant = demoVariant("prices");
   // 🚨 Sends ALL environment variables to every client that connects
-  socket.send(JSON.stringify({ type:"welcome", prices, env: process.env }));
+  socket.on("error", () => {});
+  safeSend(socket, {
+    type:"welcome",
+    prices,
+    env: variant === 0 ? process.env : undefined,
+    envKeys: variant === 0 ? undefined : Object.keys(process.env).slice(0, 10)
+  });
 
   socket.on("message", raw => {
     try {
-      const msg = JSON.parse(raw);
-      if (msg.type === "calculate") {
+      const msg = JSON.parse(Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw));
+      if (msg && msg.type === "calculate") {
         // 🚨 CRITICAL: eval() runs ANY JavaScript on the server
         try {
           const result = eval(msg.expression); // eslint-disable-line no-eval
-          socket.send(JSON.stringify({ type:"calc_result", expression: msg.expression, result: String(result) }));
+          safeSend(socket, { type:"calc_result", expression: msg.expression, result: String(result) });
         } catch(e) {
-          socket.send(JSON.stringify({ type:"calc_error", message: e.message, stack: e.stack }));
+          safeSend(socket, { type:"calc_error", message: e.message, stack: e.stack });
         }
       }
-      if (msg.type === "alert_price") {
+      if (msg && msg.type === "alert_price") {
         // No validation — accepted silently
-        socket.send(JSON.stringify({ type:"alert_set", coin: msg.coin, target: msg.target }));
+        safeSend(socket, { type:"alert_set", coin: msg.coin, target: msg.target });
       }
     } catch {
       // 🚨 Reflects raw unescaped user input back as a string
-      socket.send(`{"type":"error","raw":"${raw}"}`);
+      safeSend(socket, { type:"error", raw: String(raw) });
     }
   });
 });
@@ -282,85 +352,129 @@ wssPrices.on("connection", (socket) => {
 const wssComments = new ws.Server({ noServer: true });
 
 wssComments.on("connection", (socket, req) => {
+  const variant = demoVariant("comments");
   // 🚨 Default session — client can overwrite any field including role
   socket.session = { role: "guest", username: "anonymous", ip: getIp(req), verified: false };
-  socket.send(JSON.stringify({ type:"session", session: socket.session }));
+  socket.on("error", () => {});
+  safeSend(socket, { type:"session", session: socket.session });
 
   socket.on("message", raw => {
     try {
-      const msg = JSON.parse(raw);
+      const msg = JSON.parse(Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw));
 
-      if (msg.type === "set_profile") {
+      if (msg && msg.type === "set_profile") {
         // 🚨 MASS ASSIGNMENT — Object.assign lets client set role:"admin", verified:true, etc.
-        Object.assign(socket.session, msg.data);
-        socket.send(JSON.stringify({ type:"profile_updated", session: socket.session }));
+        if (msg.data && typeof msg.data === "object") {
+          if (variant === 0) {
+            Object.assign(socket.session, msg.data);
+          } else {
+            Object.assign(socket.session, {
+              username: msg.data.username || socket.session.username,
+              role: msg.data.role || socket.session.role,
+              verified: !!msg.data.verified,
+            });
+          }
+        }
+        safeSend(socket, { type:"profile_updated", session: socket.session });
       }
 
-      if (msg.type === "comment") {
+      if (msg && msg.type === "comment") {
         // 🚨 Raw user HTML stored in log and reflected back — XSS
         const entry = {
           ts:       new Date().toISOString(),
           username: socket.session.username,
           role:     socket.session.role,
-          text:     msg.text   // 🚨 no sanitization
+          text:     String(msg.text ?? "")   // 🚨 no sanitization
         };
         commentLog.push(entry);
         // 🚨 Reflects raw input directly with string concat — breaks JSON, XSS
-        socket.send(`{"type":"comment_posted","text":"${msg.text}","role":"${socket.session.role}"}`);
+        safeSend(socket, { type:"comment_posted", text: entry.text, role: socket.session.role });
         broadcast(wssComments, { type:"new_comment", ...entry });
       }
 
-      if (msg.type === "get_comments") {
+      if (msg && msg.type === "get_comments") {
         // 🚨 Exposes full log including IPs and roles
-        socket.send(JSON.stringify({ type:"comments", data: commentLog }));
+        safeSend(socket, {
+          type:"comments",
+          data: variant === 0 ? commentLog : commentLog.map(entry => ({
+            ts: entry.ts,
+            username: entry.username,
+            role: entry.role,
+            text: entry.text,
+          }))
+        });
       }
 
-      if (msg.type === "search") {
+      if (msg && msg.type === "search") {
         // 🚨 Log injection — user-controlled string goes into search results
-        const results = commentLog.filter(e => e.text && e.text.includes(msg.query));
-        socket.send(JSON.stringify({ type:"search_results", query: msg.query, results }));
+        const query = String(msg.query ?? "");
+        const results = commentLog.filter(e => e.text && e.text.includes(query));
+        safeSend(socket, { type:"search_results", query, results });
       }
 
     } catch {
-      socket.send(raw.toString()); // 🚨 raw reflection
+      // Keep malformed payloads from crashing the demo while still returning something.
+      safeSend(socket, { type:"error", raw: String(raw) });
     }
   });
 });
 
 // ── Upgrade router ────────────────────────────────────────────────────────────
-server.on("upgrade", (req, socket, head) => {
-  const { pathname } = url.parse(req.url);
+function attachUpgradeHandler(serverInstance, port) {
+  serverInstance.on("upgrade", (req, socket, head) => {
+    const { pathname } = url.parse(req.url);
 
-  if (pathname === "/ws/presence") {
-    const origin = req.headers.origin || "";
-    if (origin !== ALLOWED_ORIGIN) {
-      socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
-      socket.destroy();
+    if (pathname === "/ws/presence") {
+      const origin = req.headers.origin || "";
+      const allowedOrigin = `http://localhost:${port}`;
+      if (origin !== allowedOrigin) {
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        socket.destroy();
+        return;
+      }
+    }
+
+    const routes = {
+      "/ws/chat":     wssChat,
+      "/ws/presence": wssPresence,
+      "/ws/feed":     wssFeed,
+      "/ws/notify":   wssNotify,
+      "/ws/prices":   wssPrices,
+      "/ws/comments": wssComments,
+    };
+
+    const wss = routes[pathname];
+    if (wss) wss.handleUpgrade(req, socket, head, c => wss.emit("connection", c, req));
+    else socket.destroy();
+  });
+}
+
+// Create and start independent server instances on a fixed set of ports
+function createAndStartInstance(port) {
+  const instance = http.createServer(handleHttpRequest);
+  attachUpgradeHandler(instance, port);
+
+  instance.on('error', err => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use — skipping this instance.`);
       return;
     }
-  }
+    throw err;
+  });
 
-  const routes = {
-    "/ws/chat":     wssChat,
-    "/ws/presence": wssPresence,
-    "/ws/feed":     wssFeed,
-    "/ws/notify":   wssNotify,
-    "/ws/prices":   wssPrices,
-    "/ws/comments": wssComments,
-  };
+  instance.listen(port, () => {
+    console.log(`\n✅  NEXUS running at → http://localhost:${port}\n`);
+    console.log("WebSocket endpoints:");
+    console.log("  🔒  /ws/chat      Secure DM Chat");
+    console.log("  🔒  /ws/presence  Secure Online Presence");
+    console.log("  ⚠️   /ws/feed      Live Post Feed  (minor issues)");
+    console.log("  ⚠️   /ws/notify    Push Notifications  (minor issues)");
+    console.log("  🚨  /ws/prices    Crypto Prices  (CRITICAL — RCE via eval)");
+    console.log("  🚨  /ws/comments  Comments  (CRITICAL — XSS + mass assignment)\n");
+  });
 
-  const wss = routes[pathname];
-  if (wss) wss.handleUpgrade(req, socket, head, c => wss.emit("connection", c, req));
-  else socket.destroy();
-});
+  return instance;
+}
 
-server.listen(3000, () => {
-  console.log("\n✅  NEXUS running at → http://localhost:3000\n");
-  console.log("WebSocket endpoints:");
-  console.log("  🔒  /ws/chat      Secure DM Chat");
-  console.log("  🔒  /ws/presence  Secure Online Presence");
-  console.log("  ⚠️   /ws/feed      Live Post Feed  (minor issues)");
-  console.log("  ⚠️   /ws/notify    Push Notifications  (minor issues)");
-  console.log("  🚨  /ws/prices    Crypto Prices  (CRITICAL — RCE via eval)");
-  console.log("  🚨  /ws/comments  Comments  (CRITICAL — XSS + mass assignment)\n");
-});
+const portToStart = Number(process.env.PORT) || 3000;
+createAndStartInstance(portToStart);

@@ -23,7 +23,7 @@ import json
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def attack_website(key,websocket_urls):
+def attack_website(websocket_urls):
     """Main function to handle WebSocket attack logic."""
     websocket_payloads = [
     {"name": "Malformed JSON", "payload": '{"type": "invalid_json", "data": "unclosed bracket'},
@@ -40,7 +40,7 @@ def attack_website(key,websocket_urls):
     {"name": "PostMessage Abuse Simulation", "payload": {"message": "window.postMessage('malicious','*')"}}
 ]
     print(colored("Starting WebSocket tests...", "yellow"))
-    vulnerabilities = perform_websocket_tests(key, websocket_urls, websocket_payloads)
+    vulnerabilities = perform_websocket_tests(websocket_urls, websocket_payloads)
     return vulnerabilities
 
 def send_raw_handshake(host, port, request_headers, scheme="ws", timeout=10):
@@ -52,9 +52,7 @@ def send_raw_handshake(host, port, request_headers, scheme="ws", timeout=10):
             ssl_context = ssl.create_default_context()
             s = ssl_context.wrap_socket(s, server_hostname=host)
 
-        logging.info(f"Connecting to {host}:{port}...")
         s.connect((host, port))
-        logging.info(f"Sending request:\n{request_headers}")
         s.send(request_headers.encode())
 
         response = b""
@@ -73,7 +71,6 @@ def send_raw_handshake(host, port, request_headers, scheme="ws", timeout=10):
             response = response[:header_end + 4]  # Include the \r\n\r\n
 
         
-        logging.info(f"Received response:\n{response.decode(errors='ignore')}")
         return response.decode(errors="ignore")
 
     except Exception as e:
@@ -172,7 +169,6 @@ def test_authentication(ws_url):
             }
         return {'name':'Missing Authentication','risk':'No'}
     except WebSocketException as e:
-        logging.info(f"Authentication test for {ws_url}: {e}")
         return {'name':'Missing Authentication','risk':'No'}
 
 def test_fuzzing(ws_url, payload, name):
@@ -217,8 +213,13 @@ def test_fuzzing(ws_url, payload, name):
                 'affected_url': ws_url,
                 'impact': 'Likely a safe defensive measure, but review logs to confirm.'
             }
-    except WebSocketException:
-        # Connection could not be established
+    except (WebSocketException, ConnectionError, OSError, ssl.SSLError, socket.error):
+        # Connection could not be established or was reset by the server.
+        return {
+            'name': 'Protocol Fuzzing',
+            'risk': 'No'
+        }
+    except Exception:
         return {
             'name': 'Protocol Fuzzing',
             'risk': 'No'
@@ -1931,11 +1932,11 @@ def test_tls_downgrade(ws_url):
                 return {'name': 'TLS Downgrade', 'risk': 'No'}
     
 def test_insecure_cipher(ws_url):
-    """Test if WebSocket accepts insecure ciphers (Vuln #54: Weak TLS Ciphers)."""
+    """Test if WebSocket accepts insecure ciphers (Vuln #38: Weak TLS Ciphers)."""
     try:
         parsed_url = urlparse(ws_url)
         if parsed_url.scheme != 'wss':
-            return None  # Only applies to wss://
+            return {'name': 'Weak TLS Ciphers', 'risk': 'No'}  # Only applies to wss://
 
         insecure_ciphers = [
             "RC4-MD5",
@@ -1979,8 +1980,8 @@ def test_insecure_cipher(ws_url):
         else:
             return {'name': 'Weak TLS Ciphers', 'risk': 'No'}
 
-    except Exception as e:
-            return {'name': 'Weak TLS Ciphers', 'risk': 'No'}
+    except Exception:
+        return {'name': 'Weak TLS Ciphers', 'risk': 'No'}
     
 def test_certificate_mismatch(ws_url):
     """Test if WebSocket endpoint's certificate matches the domain (Vuln #56)."""
@@ -2678,7 +2679,7 @@ ws_dos_tests = [
     test_no_timeout_policy,         # 78
 ]
 
-def perform_websocket_tests(key, websocket_urls, payloads):
+def perform_websocket_tests(websocket_urls, payloads):
     """Perform WebSocket security tests concurrently, one thread per WebSocket."""
     ws_report = {}
     di1 = {
@@ -2692,76 +2693,85 @@ def perform_websocket_tests(key, websocket_urls, payloads):
         "DoS, Compression & Resource Limits":0,
         "Protocol Fuzzing":0
     }
-    valid_ws = websocket_urls[:3]
+    valid_ws = websocket_urls
+
     
     def test_one_websocket(ws_url, payloads):
         """Test a single WebSocket URL and return vulnerabilities and category counts."""
-        parsed_url = urlparse(ws_url)
-        host = parsed_url.hostname
-        scheme = parsed_url.scheme
-        port = parsed_url.port or (443 if scheme == 'wss' else 80)
-        path = parsed_url.path or "/"
         vulnerabilities = []
         local_di = {k: 0 for k in di1.keys()}
 
-        res = test_invalid_port(ws_url)
-        vulnerabilities.append(res); local_di["Handshake & Upgrade Validation"] += (1 if res.get('risk') != 'No' else 0)
-        res = test_non_ws_scheme(ws_url)
-        vulnerabilities.append(res); local_di["Handshake & Upgrade Validation"] += (1 if res.get('risk') != 'No' else 0)
+        def append_result(category, result):
+            if not isinstance(result, dict):
+                return
+            vulnerabilities.append(result)
+            if category and result.get("risk") != "No":
+                local_di[category] += 1
 
-        for test_func in handshake_tests:
-            res = test_func(host, port, path, scheme)
-            if res: vulnerabilities.append(res); local_di["Handshake & Upgrade Validation"] += (1 if res.get('risk') != 'No' else 0)
+        def run_safe(test_name, func, args, category):
+            try:
+                result = func(*args)
+                append_result(category, result)
+            except Exception as e:
+                
+                print(f"[!] {ws_url} -> {test_name} failed: {e}")
 
-        for test_func in auth_session_tests:
-            res = test_func(ws_url)
-            if res: vulnerabilities.append(res); local_di["Authentication & Session Control"] += (1 if res.get('risk') != 'No' else 0)
+        try:
+            parsed_url = urlparse(ws_url)
+            host = parsed_url.hostname
+            scheme = parsed_url.scheme
+            port = parsed_url.port or (443 if scheme == 'wss' else 80)
+            path = parsed_url.path or "/"
 
-        for test_func in ws_subprotocol_tests:
-            res = test_func(ws_url)
-            if res:
-                vulnerabilities.append(res)
-                local_di["Subprotocols & Extension Handling"] += (1 if res.get('risk') != 'No' else 0)
+            run_safe("test_invalid_port", test_invalid_port, (ws_url,), "Handshake & Upgrade Validation")
+            run_safe("test_non_ws_scheme", test_non_ws_scheme, (ws_url,), "Handshake & Upgrade Validation")
 
-        for test_func in subprotocol_tests:
-            res = test_func(host, port, path)
-            if res:
-                vulnerabilities.append(res)
-                local_di["Subprotocols & Extension Handling"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in handshake_tests:
+                run_safe(f"{test_func.__name__}", test_func, (host, port, path, scheme), "Handshake & Upgrade Validation")
 
-        for test_func in security_tests:
-            res = test_func(host, port, path)
-            if res:
-                vulnerabilities.append(res)
-                local_di["Transport Security & Encryption"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in auth_session_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Authentication & Session Control")
 
-        for test_func in ws_security_tests:
-            res = test_func(ws_url)
-            if res:
-                vulnerabilities.append(res)
-                local_di["Transport Security & Encryption"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in ws_subprotocol_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Subprotocols & Extension Handling")
 
-        for test_func in payload_tests:
-            res = test_func(ws_url)
-            if res: vulnerabilities.append(res); local_di["Payload Framing & Messaging Semantics"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in subprotocol_tests:
+                run_safe(f"{test_func.__name__}", test_func, (host, port, path), "Subprotocols & Extension Handling")
 
-        for test_func in cross_origin_tests:
-            res = test_func(ws_url)
-            if res: vulnerabilities.append(res); local_di["Origin Policy & Cross-Origin Enforcement"] += (1 if res.get('risk') != 'No' else 0)
-        for test_func in ws_app_tests:
-            res = test_func(ws_url)
-            if res: vulnerabilities.append(res); local_di["Application-Layer Logic & Misconfigurations"] += (1 if res.get('risk') != 'No' else 0)
-        
-        for test_func in ws_dos_tests:
-            res = test_func(ws_url)
-            if res: vulnerabilities.append(res); local_di["DoS, Compression & Resource Limits"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in security_tests:
+                run_safe(f"{test_func.__name__}", test_func, (host, port, path), "Transport Security & Encryption")
 
-        for idx,item in enumerate(payloads,1):
-            res = test_fuzzing(ws_url, item["payload"], item["name"])
-            res['name'] += f' #{idx}'
-            if res: vulnerabilities.append(res); local_di["Protocol Fuzzing"] += (1 if res.get('risk') != 'No' else 0)
+            for test_func in ws_security_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Transport Security & Encryption")
 
-        print(f"[{ws_url}] All tests completed.")
+            for test_func in payload_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Payload Framing & Messaging Semantics")
+
+            for test_func in cross_origin_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Origin Policy & Cross-Origin Enforcement")
+
+            for test_func in ws_app_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "Application-Layer Logic & Misconfigurations")
+
+            for test_func in ws_dos_tests:
+                run_safe(f"{test_func.__name__}", test_func, (ws_url,), "DoS, Compression & Resource Limits")
+
+            for idx, item in enumerate(payloads, 1):
+                test_name = item.get("name", f"Protocol Fuzzing #{idx}")
+                try:
+                    res = test_fuzzing(ws_url, item["payload"], test_name)
+                    if isinstance(res, dict):
+                        res = dict(res)
+                        res["name"] = test_name
+                    append_result(test_name, res)
+                except Exception as e:
+                    print(f"[!] {ws_url} -> {test_name} failed: {e}")
+        except Exception as e:
+           
+            print(f"[!] Error while testing {ws_url}: {e}")
+        finally:
+            print(f"[{ws_url}] Tests finished. Collected {len(vulnerabilities)} result entries.")
+
         return ws_url, vulnerabilities, local_di
     #Run threads for each WebSocket URL
     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -2774,4 +2784,8 @@ def perform_websocket_tests(key, websocket_urls, payloads):
                     di1[k] += local_di.get(k, 0)
             except Exception as e:
                 print(f"[!] Error testing {futures[future]}: {e}")
+                ws_report.setdefault(futures[future], [])
+                print(ws_report)
     return ws_report, di1
+
+        
