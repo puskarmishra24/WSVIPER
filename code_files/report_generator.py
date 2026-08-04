@@ -601,14 +601,14 @@ def generate_pdf_report(combined_results):
         # === All Scanned Websites Section ===
         elements.append(Paragraph("Quick Insights", heading2_style))
         elements.append(Paragraph(
-            "This section lists all scanned websites, shows the overall vulnerability test distribution by category with a pie chart, displays a heatmap which shows how the WebSockets of a website responded to the attacks, and shows the overall count of vulnerabilities found by category in a tabular form and through a bar chart. These quick insights can be used for analysis at a glance and understanding patterns in security issues easily.",
+            "This section lists the overall vulnerability test distribution by category with a pie chart, displays a heatmap which shows how the WebSockets of a website responded to the attacks, and shows the overall count of vulnerabilities found by category in a tabular form and through a bar chart. These quick insights can be used for analysis at a glance and understanding patterns in security issues easily.",
         styles['Normal']
         ))
         elements.append(Spacer(1, 10))
 
-        scanned_urls = combined_results.get("urls_scanned", [])
+        scanned_url = combined_results.get("url_scanned", [])
         urls_table_data = [["#", "Website"]]
-        urls_table_data += [[str(i+1), create_wrapped_cell(url, 50)] for i, url in enumerate(scanned_urls)]
+        urls_table_data += [[str(1), create_wrapped_cell(scanned_url, 50)]]
 
         urls_table = Table(urls_table_data, colWidths=[0.5 * inch, 5.5 * inch])
         urls_table.setStyle(TableStyle([
@@ -674,13 +674,12 @@ def generate_pdf_report(combined_results):
 
         # Description paragraph for Detailed Scan Results section
         details_para_text = (
-            "This section provides an in-depth breakdown of each scanned URL. "
-            "For every URL, it lists the scan duration, number of URLs crawled, "
+            "This section provides an in-depth breakdown of the scanned URL. "
+            "It lists the scan duration, number of URLs crawled, "
             "and the number of WebSocket endpoints discovered. It helps identify how many potential communication "
             "channels were exposed for testing. Each target's vulnerability distribution is summarized "
             "by severity (High, Medium, Low) in the table and by a bar chart, followed by a detailed list of detected vulnerabilities. "
             "This allows for a thorough understanding of the security posture and exposure of each target URL."
-            " It is to be noted that all WebSocket Endpoints are publicly listed and there is no intent to attack or damage servers."
         )
 
         elements.append(Paragraph(details_para_text, styles['Normal']))

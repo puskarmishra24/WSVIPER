@@ -2839,7 +2839,7 @@ def perform_websocket_tests(websocket_urls, payloads):
                         res = dict(res)
                         res["name"] = payload_name
                         res["payload_name"] = payload_name
-                    append_result(payload_name, res)
+                    append_result("Protocol Fuzzing", res)
                 except Exception as e:
                     print(f"[!] {ws_url} -> {payload_name} failed: {e}")
 

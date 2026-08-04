@@ -6,8 +6,8 @@ from pprint import pprint
 
 with open('report1.dat','rb') as f:
     s = pickle.load(f)
-
-
+    s['detailed_results']["http://localhost:3000"]['dict_errors'] =24 
+    s['dict_total_errors']["Protocol Fuzzing"] = 24
 
 def flatten_vulns(vuln_list):
     flat = []
