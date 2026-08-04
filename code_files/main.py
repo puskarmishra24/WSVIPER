@@ -5,7 +5,6 @@ import asyncio
 from datetime import datetime
 import pickle
 import time
-
 from termcolor import colored
 
 import attack

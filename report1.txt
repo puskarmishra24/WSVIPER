@@ -1,13 +1,77 @@
 {
-    "scan_start_time": "2026-07-01 17:00:06",
-    "total_scan_duration": 364.4584321975708,
+    "scan_start_time": "2026-07-16 20:16:45",
+    "total_scan_duration": 372.4998474121094,
     "url_scanned": "http://localhost:3000",
     "total_vulnerabilities": {
         "High": 132,
-        "Medium": 69,
+        "Medium": 68,
         "Low": 29,
-        "No": 220
+        "No": 221
     },
+    "endpoint_category_intent": {
+        "/ws/chat": {
+            "susceptible_categories": [
+                "Transport Security & Encryption"
+            ],
+            "resilient_categories": [
+                "Authentication & Session Control",
+                "DoS, Compression & Resource Limits"
+            ],
+            "rationale": "Token auth and rate limiting are in place, but endpoint runs over ws:// in this demo."
+        },
+        "/ws/presence": {
+            "susceptible_categories": [
+                "Transport Security & Encryption",
+                "Authentication & Session Control"
+            ],
+            "resilient_categories": [
+                "Origin Policy & Cross-Origin Enforcement",
+                "Payload Framing & Messaging Semantics"
+            ],
+            "rationale": "Strict origin lock and read-only messaging, but no user auth and no TLS enforcement."
+        },
+        "/ws/feed": {
+            "susceptible_categories": [
+                "Authentication & Session Control",
+                "DoS, Compression & Resource Limits"
+            ],
+            "resilient_categories": [
+                "Payload Framing & Messaging Semantics"
+            ],
+            "rationale": "Weak session/no auth/no rate limit; malformed JSON is handled without crashing."
+        },
+        "/ws/notify": {
+            "susceptible_categories": [
+                "Authentication & Session Control",
+                "Application-Layer Logic & Misconfigurations"
+            ],
+            "resilient_categories": [
+                "Payload Framing & Messaging Semantics"
+            ],
+            "rationale": "Any client can broadcast notifications; malformed payload parsing is handled."
+        },
+        "/ws/prices": {
+            "susceptible_categories": [
+                "Application-Layer Logic & Misconfigurations",
+                "Payload Framing & Messaging Semantics"
+            ],
+            "resilient_categories": [
+                "Protocol Fuzzing"
+            ],
+            "rationale": "eval/env leak are intentional critical flaws; malformed payload handling should not crash process."
+        },
+        "/ws/comments": {
+            "susceptible_categories": [
+                "Authentication & Session Control",
+                "Application-Layer Logic & Misconfigurations"
+            ],
+            "resilient_categories": [
+                "Protocol Fuzzing"
+            ],
+            "rationale": "Mass assignment and reflected content are intentional flaws; malformed payload handling should remain stable."
+        }
+    },
+    "endpoint_category_intent_validation": [],
     "detailed_results": {
         "http://localhost:3000": {
             "num_crawled_urls": 1,
@@ -19,11 +83,11 @@
                 "ws://localhost:3000/ws/feed",
                 "ws://localhost:3000/ws/prices",
                 "ws://localhost:3000/ws/presence",
-                "ws://localhost:3000/ws/comments",
-                "ws://localhost:3000/ws/notify"
+                "ws://localhost:3000/ws/notify",
+                "ws://localhost:3000/ws/comments"
             ],
             "crawl_notes": "",
-            "scan_duration": 360.1731152534485,
+            "scan_duration": 362.43437933921814,
             "vulnerabilities": {
                 "ws://localhost:3000/ws/presence": [
                     {
@@ -421,7 +485,7 @@
                     {
                         "name": "Connection Flood",
                         "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/presence allowed 100 concurrent connections in 1.35s.",
+                        "description": "WebSocket at ws://localhost:3000/ws/presence allowed 100 concurrent connections in 2.69s.",
                         "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
                         "affected_url": "ws://localhost:3000/ws/presence",
                         "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
@@ -490,62 +554,98 @@
                     {
                         "name": "Protocol Fuzzing #1",
                         "risk": "No",
-                        "payload_name": "Null Bytes in JSON String"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Malformed JSON' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Malformed JSON"
                     },
                     {
                         "name": "Protocol Fuzzing #2",
                         "risk": "No",
-                        "payload_name": "PostMessage Abuse Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'XSS Attempt' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "XSS Attempt"
                     },
                     {
                         "name": "Protocol Fuzzing #3",
                         "risk": "No",
-                        "payload_name": "Oversized DoS Message (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Large Payload for DoS (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Large Payload for DoS (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #4",
                         "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Invalid Binary Frame' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Invalid Binary Frame"
                     },
                     {
                         "name": "Protocol Fuzzing #5",
                         "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Command Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Command Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #6",
                         "risk": "No",
-                        "payload_name": "Large Payload for DoS (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'SQL Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "SQL Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #7",
                         "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Expression Evaluation Injection' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Expression Evaluation Injection"
                     },
                     {
                         "name": "Protocol Fuzzing #8",
                         "risk": "No",
-                        "payload_name": "SQL Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Null Bytes in JSON String' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Null Bytes in JSON String"
                     },
                     {
                         "name": "Protocol Fuzzing #9",
                         "risk": "No",
-                        "payload_name": "Path Traversal Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Unicode Characters in Payload' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Unicode Characters in Payload"
                     },
                     {
                         "name": "Protocol Fuzzing #10",
                         "risk": "No",
-                        "payload_name": "XSS Attempt"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Oversized DoS Message (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Oversized DoS Message (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #11",
                         "risk": "No",
-                        "payload_name": "Malformed JSON"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'Path Traversal Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Path Traversal Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #12",
                         "risk": "No",
-                        "payload_name": "Unicode Characters in Payload"
+                        "description": "WebSocket at ws://localhost:3000/ws/presence handled payload 'PostMessage Abuse Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/presence",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "PostMessage Abuse Simulation"
                     }
                 ],
                 "ws://localhost:3000/ws/feed": [
@@ -988,7 +1088,7 @@
                     {
                         "name": "Connection Flood",
                         "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/feed allowed 100 concurrent connections in 1.78s.",
+                        "description": "WebSocket at ws://localhost:3000/ws/feed allowed 100 concurrent connections in 2.67s.",
                         "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
                         "affected_url": "ws://localhost:3000/ws/feed",
                         "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
@@ -999,7 +1099,7 @@
                         "description": "WebSocket at ws://localhost:3000/ws/feed accepted a 10MB message.",
                         "solution": "Set a reasonable max message size limit (e.g., 1MB) to prevent buffer overflows.",
                         "affected_url": "ws://localhost:3000/ws/feed",
-                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 99 bytes."
+                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 93 bytes."
                     },
                     {
                         "name": "Max Connections",
@@ -1057,62 +1157,98 @@
                     {
                         "name": "Protocol Fuzzing #1",
                         "risk": "No",
-                        "payload_name": "Oversized DoS Message (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Malformed JSON' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Malformed JSON"
                     },
                     {
                         "name": "Protocol Fuzzing #2",
                         "risk": "No",
-                        "payload_name": "SQL Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'XSS Attempt' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "XSS Attempt"
                     },
                     {
                         "name": "Protocol Fuzzing #3",
                         "risk": "No",
-                        "payload_name": "Expression Evaluation Injection"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Large Payload for DoS (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Large Payload for DoS (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #4",
                         "risk": "No",
-                        "payload_name": "PostMessage Abuse Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Invalid Binary Frame' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Invalid Binary Frame"
                     },
                     {
                         "name": "Protocol Fuzzing #5",
                         "risk": "No",
-                        "payload_name": "Path Traversal Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Command Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Command Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #6",
                         "risk": "No",
-                        "payload_name": "Command Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'SQL Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "SQL Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #7",
                         "risk": "No",
-                        "payload_name": "Unicode Characters in Payload"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Expression Evaluation Injection' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Expression Evaluation Injection"
                     },
                     {
                         "name": "Protocol Fuzzing #8",
                         "risk": "No",
-                        "payload_name": "Large Payload for DoS (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Null Bytes in JSON String' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Null Bytes in JSON String"
                     },
                     {
                         "name": "Protocol Fuzzing #9",
                         "risk": "No",
-                        "payload_name": "Invalid Binary Frame"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Unicode Characters in Payload' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Unicode Characters in Payload"
                     },
                     {
                         "name": "Protocol Fuzzing #10",
                         "risk": "No",
-                        "payload_name": "XSS Attempt"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Oversized DoS Message (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Oversized DoS Message (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #11",
                         "risk": "No",
-                        "payload_name": "Malformed JSON"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'Path Traversal Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Path Traversal Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #12",
                         "risk": "No",
-                        "payload_name": "Null Bytes in JSON String"
+                        "description": "WebSocket at ws://localhost:3000/ws/feed handled payload 'PostMessage Abuse Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/feed",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "PostMessage Abuse Simulation"
                     }
                 ],
                 "ws://localhost:3000/ws/prices": [
@@ -1522,11 +1658,7 @@
                     },
                     {
                         "name": "Error Message Leak",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/prices leaks sensitive error messages: {\"type\":\"welcome\",\"prices\":{\"BTC\":62476.85,\"ETH\":3189.25,\"SOL\":147.39,\"NEXUS\":4.21},\"env\":{\"ALLUSERSPROFILE\":\"C:\\\\ProgramData\",\"APPDATA\":\"C:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\",\"ChocolateyInstall\":\"C:\\\\ProgramData\\\\chocolatey\",\"ChocolateyLastPathUpdate\":\"133702444167870130\",\"CHROME_CRASHPAD_PIPE_NAME\":\"\\\\\\\\.\\\\pipe\\\\crashpad_4436_MWWSCEFIAZYCGIQG\",\"CommonProgramFiles\":\"C:\\\\Program Files\\\\Common Files\",\"CommonProgramFiles(x86)\":\"C:\\\\Program Files (x86)\\\\Common Files\",\"CommonProgramW6432\":\"C:\\\\Program Files\\\\Common Files\",\"COMPUTERNAME\":\"LAPTOP-KGMNJSJJ\",\"ComSpec\":\"C:\\\\WINDOWS\\\\system32\\\\cmd.exe\",\"DriverData\":\"C:\\\\Windows\\\\System32\\\\Drivers\\\\DriverData\",\"EFC_19864_1592913036\":\"1\",\"EFC_19864_4126798990\":\"1\",\"HOMEDRIVE\":\"C:\",\"HOMEPATH\":\"\\\\Users\\\\Tejas\",\"LOCALAPPDATA\":\"C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\",\"LOGONSERVER\":\"\\\\\\\\LAPTOP-KGMNJSJJ\",\"NUMBER_OF_PROCESSORS\":\"8\",\"OneDrive\":\"D:\\\\OneDrive\",\"OneDriveConsumer\":\"D:\\\\OneDrive\",\"OnlineServices\":\"Online Services\",\"OS\":\"Windows_NT\",\"Path\":\"c:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\globalStorage\\\\github.copilot-chat\\\\debugCommand;c:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\globalStorage\\\\github.copilot-chat\\\\copilotCli;C:\\\\Program Files\\\\Common Files\\\\Oracle\\\\Java\\\\javapath;C:\\\\Python312\\\\Scripts\\\\;C:\\\\Python312\\\\;C:\\\\WINDOWS\\\\system32;C:\\\\WINDOWS;C:\\\\WINDOWS\\\\System32\\\\Wbem;C:\\\\WINDOWS\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\;C:\\\\WINDOWS\\\\System32\\\\OpenSSH\\\\;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python39;C:\\\\flutter_windows_3.13.3-stable\\\\flutter\\\\bin;C:\\\\Program Files\\\\Git\\\\cmd;C:\\\\MinGW\\\\bin;C:\\\\Program Files\\\\nodejs\\\\;C:\\\\ProgramData\\\\chocolatey\\\\bin;c:\\\\users\\\\tejas\\\\appdata\\\\roaming\\\\python\\\\python312\\\\site-packages;;C:\\\\Program Files\\\\Docker\\\\Docker\\\\resources\\\\bin;C:\\\\Program Files\\\\dotnet\\\\;C:\\\\Program Files\\\\MySQL\\\\MySQL Shell 8.0\\\\bin\\\\;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Microsoft\\\\WindowsApps;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\GitHubDesktop\\\\bin;C:\\\\MinGW\\\\bin;C:\\\\iverilog\\\\bin;C:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\npm;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Programs\\\\Microsoft VS Code\\\\bin;c:\\\\users\\\\tejas\\\\appdata\\\\roaming\\\\python\\\\python312\\\\site-packages;C:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Python\\\\Python312\\\\Scripts;C:\\\\GnuWin32\\\\bin;C:\\\\Program Files\\\\MySQL\\\\MySQL Server 8.0\\\\bin;C:\\\\Program Files\\\\Java\\\\jdk-25.0.2\\\\bin;C:\\\\Program Files (x86)\\\\apache-maven-3.9.13\\\\bin;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Programs\\\\Antigravity\\\\bin;C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Links;;c:\\\\Users\\\\Tejas\\\\.vscode\\\\extensions\\\\ms-python.debugpy-2026.6.0-win32-x64\\\\bundled\\\\scripts\\\\noConfigScripts\",\"PATHEXT\":\".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY;.PYW;.CPL\",\"platformcode\":\"KV\",\"PROCESSOR_ARCHITECTURE\":\"AMD64\",\"PROCESSOR_IDENTIFIER\":\"AMD64 Family 23 Model 24 Stepping 1, AuthenticAMD\",\"PROCESSOR_LEVEL\":\"23\",\"PROCESSOR_REVISION\":\"1801\",\"ProgramData\":\"C:\\\\ProgramData\",\"ProgramFiles\":\"C:\\\\Program Files\",\"ProgramFiles(x86)\":\"C:\\\\Program Files (x86)\",\"ProgramW6432\":\"C:\\\\Program Files\",\"PSModulePath\":\"D:\\\\OneDrive\\\\Documents\\\\WindowsPowerShell\\\\Modules;C:\\\\Program Files\\\\WindowsPowerShell\\\\Modules;C:\\\\WINDOWS\\\\system32\\\\WindowsPowerShell\\\\v1.0\\\\Modules\",\"PUBLIC\":\"C:\\\\Users\\\\Public\",\"RegionCode\":\"APJ\",\"SESSIONNAME\":\"Console\",\"SystemDrive\":\"C:\",\"SystemRoot\":\"C:\\\\WINDOWS\",\"TEMP\":\"C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Temp\",\"TMP\":\"C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Temp\",\"USERDOMAIN\":\"LAPTOP-KGMNJSJJ\",\"USERDOMAIN_ROAMINGPROFILE\":\"LAPTOP-KGMNJSJJ\",\"USERNAME\":\"Tejas\",\"USERPROFILE\":\"C:\\\\Users\\\\Tejas\",\"VBOX_HWVIRTEX_IGNORE_SVM_IN_USE\":\"1\",\"VBOX_MSI_INSTALL_PATH\":\"D:\\\\Virtual Box\\\\\",\"VSCODE_PYTHON_AUTOACTIVATE_GUARD\":\"1\",\"windir\":\"C:\\\\WINDOWS\",\"TERM_PROGRAM\":\"vscode\",\"TERM_PROGRAM_VERSION\":\"1.126.0\",\"LANG\":\"en_US.UTF-8\",\"COLORTERM\":\"truecolor\",\"COPILOT_DEBUG_NONCE\":\"ae48a558418a6d20da24aef174965ad6\",\"GIT_ASKPASS\":\"c:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\globalStorage\\\\vscode.git\\\\askpass\\\\70789581cae28aa7\\\\askpass.sh\",\"VSCODE_GIT_ASKPASS_NODE\":\"C:\\\\Users\\\\Tejas\\\\AppData\\\\Local\\\\Programs\\\\Microsoft VS Code\\\\Code.exe\",\"VSCODE_GIT_ASKPASS_EXTRA_ARGS\":\"\",\"VSCODE_GIT_ASKPASS_MAIN\":\"c:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\globalStorage\\\\vscode.git\\\\askpass\\\\70789581cae28aa7\\\\askpass-main.js\",\"VSCODE_GIT_IPC_HANDLE\":\"\\\\\\\\.\\\\pipe\\\\vscode-git-951db35517-sock\",\"PYDEVD_DISABLE_FILE_VALIDATION\":\"1\",\"VSCODE_DEBUGPY_ADAPTER_ENDPOINTS\":\"c:\\\\Users\\\\Tejas\\\\.vscode\\\\extensions\\\\ms-python.debugpy-2026.6.0-win32-x64\\\\.noConfigDebugAdapterEndpoints\\\\endpoint-545145662d2be203.txt\",\"BUNDLED_DEBUGPY_PATH\":\"c:\\\\Users\\\\Tejas\\\\.vscode\\\\extensions\\\\ms-python.debugpy-2026.6.0-win32-x64\\\\bundled\\\\libs\\\\debugpy\",\"PYTHONSTARTUP\":\"c:\\\\Users\\\\Tejas\\\\AppData\\\\Roaming\\\\Code\\\\User\\\\workspaceStorage\\\\b0b47d5384da2be4a187615101156066\\\\ms-python.python\\\\pythonrc.py\",\"PYTHON_BASIC_REPL\":\"1\",\"VSCODE_INJECTION\":\"1\"}}.",
-                        "solution": "Avoid exposing detailed error messages in production; use generic error responses.",
-                        "affected_url": "ws://localhost:3000/ws/prices",
-                        "impact": "Error message leaks can expose server details to attackers."
+                        "risk": "No"
                     },
                     {
                         "name": "Server Disclosure",
@@ -1559,7 +1691,7 @@
                     {
                         "name": "Connection Flood",
                         "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/prices allowed 100 concurrent connections in 1.96s.",
+                        "description": "WebSocket at ws://localhost:3000/ws/prices allowed 100 concurrent connections in 2.58s.",
                         "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
                         "affected_url": "ws://localhost:3000/ws/prices",
                         "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
@@ -1570,7 +1702,7 @@
                         "description": "WebSocket at ws://localhost:3000/ws/prices accepted a 10MB message.",
                         "solution": "Set a reasonable max message size limit (e.g., 1MB) to prevent buffer overflows.",
                         "affected_url": "ws://localhost:3000/ws/prices",
-                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 4835 bytes."
+                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 291 bytes."
                     },
                     {
                         "name": "Max Connections",
@@ -1628,629 +1760,98 @@
                     {
                         "name": "Protocol Fuzzing #1",
                         "risk": "No",
-                        "payload_name": "Large Payload for DoS (JSON)"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #2",
-                        "risk": "No",
-                        "payload_name": "Command Injection Simulation"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #3",
-                        "risk": "No",
-                        "payload_name": "Path Traversal Simulation"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #4",
-                        "risk": "No",
-                        "payload_name": "Null Bytes in JSON String"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #5",
-                        "risk": "No",
-                        "payload_name": "Oversized DoS Message (JSON)"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #6",
-                        "risk": "No",
-                        "payload_name": "Expression Evaluation Injection"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #7",
-                        "risk": "No",
-                        "payload_name": "Unicode Characters in Payload"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #8",
-                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Malformed JSON' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Malformed JSON"
                     },
                     {
-                        "name": "Protocol Fuzzing #9",
-                        "risk": "No",
-                        "payload_name": "Invalid Binary Frame"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #10",
-                        "risk": "No",
-                        "payload_name": "SQL Injection Simulation"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #11",
-                        "risk": "No",
-                        "payload_name": "PostMessage Abuse Simulation"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #12",
-                        "risk": "No",
-                        "payload_name": "XSS Attempt"
-                    }
-                ],
-                "ws://localhost:3000/ws/comments": [
-                    {
-                        "name": "Invalid Port",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Non-WS Scheme",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Omit Sec-WebSocket-Key",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Non-Base64 Sec-WebSocket-Key",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Oversized Sec-WebSocket-Key",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Duplicate Sec-WebSocket-Key",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Missing Sec-WebSocket-Version",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Invalid Sec-WebSocket-Version",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Conflicting Sec-WebSocket-Version",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Wrong Upgrade Header",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Missing Connection Header",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Case-Sensitive Headers",
-                        "risk": "Low",
-                        "description": "Server at localhost:3000 accepted case-sensitive headers.",
-                        "solution": "Ensure case-insensitive header parsing as per RFC.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Inconsistent header parsing can lead to security bypasses."
-                    },
-                    {
-                        "name": "Non-GET Method",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Fake HTTP Status",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Wrong Sec-WebSocket-Accept",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Oversized Headers",
-                        "risk": "Medium",
-                        "description": "Server at localhost:3000 accepted handshake with oversized headers.",
-                        "solution": "Set limits for header size to prevent resource exhaustion.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Oversized headers can cause denial-of-service attacks."
-                    },
-                    {
-                        "name": "Missing Host Header",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted handshake without Host header.",
-                        "solution": "Enforce Host header validation.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Missing Host header can allow domain spoofing."
-                    },
-                    {
-                        "name": "Fake Host Header",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted handshake with incorrect Host header.",
-                        "solution": "Validate Host header to match expected server domain.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Fake Host headers can enable domain spoofing attacks."
-                    },
-                    {
-                        "name": "Multiple Host Headers",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted handshake with multiple Host headers.",
-                        "solution": "Reject requests with duplicate Host headers.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Multiple Host headers can confuse server routing."
-                    },
-                    {
-                        "name": "Long URL Path",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Unicode URL",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "HTTP/0.9 Handshake",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "No Session Cookie",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections without a session cookie.",
-                        "solution": "Require valid session cookies (or tokens) to authenticate WebSocket clients.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Unauthenticated users can establish WebSocket sessions, exposing sensitive data."
-                    },
-                    {
-                        "name": "Expired Cookie",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections with an expired session cookie.",
-                        "solution": "Validate cookie expiration on the server side and reject expired tokens.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Expired sessions may be reused by attackers, leading to unauthorized access."
-                    },
-                    {
-                        "name": "Fake Token",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections with a fake authentication token.",
-                        "solution": "Implement robust token validation (e.g., JWT signature verification, token expiry check, audience validation).",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Fake tokens can lead to unauthorized access, impersonation, or escalation."
-                    },
-                    {
-                        "name": "HTTP Session Reuse",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Stale Session Reconnect",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments allows reconnection with same stale session cookie.",
-                        "solution": "Invalidate old session IDs on WebSocket reconnect. Require fresh authentication or refresh token.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Attackers can reuse stolen or outdated session tokens for unauthorized access."
-                    },
-                    {
-                        "name": "Cross-Site Cookie Hijack",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted cross-origin cookies and origin header.",
-                        "solution": "Set SameSite=Strict on cookies and validate the Origin header server-side.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Attackers could hijack sessions via forged WebSocket connections from malicious origins."
-                    },
-                    {
-                        "name": "Missing Authentication",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments allows unauthenticated connections and responds with data.",
-                        "solution": "Require authentication (e.g., JWT, API keys) for WebSocket connections.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Unauthorized access to sensitive data or functionality."
-                    },
-                    {
-                        "name": "Invalid Subprotocol",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments negotiated invalid subprotocol: 'invalid..protocol'.",
-                        "solution": "Reject malformed or unsupported subprotocol values during handshake.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Invalid subprotocols can lead to parser confusion, downgrade attacks, or misbehavior."
-                    },
-                    {
-                        "name": "Conflicting Subprotocols",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Unaccepted Subprotocol",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments negotiated unadvertised subprotocol 'unadvertised_protocol'.",
-                        "solution": "Only negotiate subprotocols explicitly supported by the server.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Unadvertised subprotocols can allow unintended parsing or behavior (e.g., logic injection)."
-                    },
-                    {
-                        "name": "Fake Extension",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted spoofed extension.",
-                        "solution": "Validate Sec-WebSocket-Extensions header against supported values.",
-                        "affected_host": "localhost:3000/ws/comments",
-                        "impact": "Fake extensions can lead to parser confusion or misbehavior."
-                    },
-                    {
-                        "name": "Conflicting Extensions",
-                        "risk": "Medium",
-                        "description": "Server at localhost:3000 accepted conflicting extensions.",
-                        "solution": "Reject requests with duplicate or conflicting extensions.",
-                        "affected_host": "localhost:3000",
-                        "impact": "Conflicting extensions can cause protocol errors."
-                    },
-                    {
-                        "name": "Spoofed Connection Header",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted spoofed Connection header.",
-                        "solution": "Strictly validate Connection header to be exactly \"Upgrade\".",
-                        "affected_host": "localhost:3000/ws/comments",
-                        "impact": "Spoofed headers can bypass upgrade validation or confuse reverse proxies."
-                    },
-                    {
-                        "name": "HTTP/1.0 Downgrade",
-                        "risk": "High",
-                        "description": "Server at localhost:3000 accepted HTTP/1.0 WebSocket handshake.",
-                        "solution": "Only allow WebSocket upgrades over HTTP/1.1 or newer.",
-                        "affected_host": "localhost:3000/ws/comments",
-                        "impact": "Accepting HTTP/1.0 WebSocket handshakes can lead to protocol confusion and security issues."
-                    },
-                    {
-                        "name": "TLS Downgrade",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Weak TLS Ciphers",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Certificate Mismatch",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Undefined Opcode",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with undefined opcode 0x3.",
-                        "solution": "Reject frames with undefined opcodes.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Undefined opcodes can cause unexpected server behavior."
-                    },
-                    {
-                        "name": "Reserved Opcode",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with reserved opcode 0xB.",
-                        "solution": "Reject frames with reserved opcodes (0x3-0x7, 0xB-0xF).",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Reserved opcodes can lead to protocol errors."
-                    },
-                    {
-                        "name": "Zero-Length Fragment",
-                        "risk": "Low",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted zero-length fragments and responded unexpectedly.",
-                        "solution": "Reject or limit incomplete fragmented messages.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Zero-length fragments can cause server confusion or buffer exhaustion."
-                    },
-                    {
-                        "name": "Invalid Payload Length",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with declared payload length 10 but sent only 4 bytes.",
-                        "solution": "Validate payload length matches actual data.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Invalid lengths can cause buffer overflows or crashes."
-                    },
-                    {
-                        "name": "Negative Payload Length",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted forged extended payload length (0x8000000000000001).",
-                        "solution": "Validate payload length fields and reject extreme or invalid values.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Signed overflows in length handling can lead to crashes or memory corruption."
-                    },
-                    {
-                        "name": "Mismatched Payload",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frames with mismatched lengths.",
-                        "solution": "Ensure payload lengths match.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Can lead to parsing errors, decoder crashes, or type confusion."
-                    },
-                    {
-                        "name": "Invalid Masking Key",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a frame with invalid masking key pattern: All-zero.",
-                        "solution": "Enforce strict validation of client masking keys per RFC 6455.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Improper masking validation may cause data integrity issues or security flaws."
-                    },
-                    {
-                        "name": "Unmasked Client Frame",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted an unmasked client frame.",
-                        "solution": "Require masking for all client-to-server frames per RFC 6455.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Unmasked frames can be intercepted or misused in shared environments."
-                    },
-                    {
-                        "name": "Invalid RSV Bits",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a frame with invalid RSV1 bit set.",
-                        "solution": "Reject non-zero RSV bits unless explicitly negotiated via extension.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "May trigger unintended behaviors, desyncs, or extension misinterpretation."
-                    },
-                    {
-                        "name": "Oversized Control Frame",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a ping control frame with 126-byte payload.",
-                        "solution": "Reject control frames larger than 125 bytes as per RFC 6455.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Oversized control frames can crash or desync the server."
-                    },
-                    {
-                        "name": "Non-UTF-8 Text",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame with invalid UTF-8 bytes.",
-                        "solution": "Ensure strict UTF-8 validation of text frames.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Improper decoding may cause crashes, parser confusion, or security flaws."
-                    },
-                    {
-                        "name": "Null Bytes in Text",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame containing null bytes.",
-                        "solution": "Validate and sanitize text frames for embedded nulls. Avoid C-style string truncation risks.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Null bytes may cause truncation, spoofing, or parsing logic issues in downstream systems."
-                    },
-                    {
-                        "name": "Binary as Text",
-                        "risk": "Low",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame with non-UTF-8 binary data.",
-                        "solution": "Validate UTF-8 compliance in all text frames as per RFC 6455.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Binary data in text frames can crash UTF-8 decoders or lead to logic bugs in logging, auth, or sanitization layers."
-                    },
-                    {
-                        "name": "Text as Binary",
-                        "risk": "Low",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted UTF-8 text sent in a binary frame.",
-                        "solution": "Handle binary and text frames with separate logic as per RFC 6455.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Frame type confusion may lead to parsing errors, logging bugs, or misrouted messages."
-                    },
-                    {
-                        "name": "Invalid Close Code",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a close frame with invalid code 999.",
-                        "solution": "Close codes must conform to RFC 6455 (valid: 1000-1015, 3000-4999).",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Invalid codes may cause parser errors or incorrect shutdown logic."
-                    },
-                    {
-                        "name": "Early Close Frame",
-                        "risk": "Low",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted an early close frame before any data was exchanged.",
-                        "solution": "Gracefully handle close frames sent immediately after handshake.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Unexpected early closes may cause resource leaks or state desyncs if not handled correctly."
-                    },
-                    {
-                        "name": "No Close Frame",
-                        "risk": "Low",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments handled abrupt TCP closure and allowed clean reconnection.",
-                        "solution": "Ensure that server detects and cleans up on ungraceful disconnects.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Abrupt closures (without a close frame) may leave sessions open or leak memory."
-                    },
-                    {
-                        "name": "Long Close Reason",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted close frame with long reason (123 bytes).",
-                        "solution": "Enforce strict limits on close reason size (\u2264123 bytes).",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Overly long reasons may stress server logs, cause parsing failures, or lead to DoS."
-                    },
-                    {
-                        "name": "Missing CORS Headers",
-                        "risk": "High",
-                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) lacks proper CORS headers.",
-                        "solution": "Implement proper CORS headers to restrict cross-origin access.",
-                        "affected_url": "http://localhost:3000/",
-                        "impact": "Missing or misconfigured CORS headers can lead to unauthorized cross-origin requests."
-                    },
-                    {
-                        "name": "Cross-Origin Iframe",
-                        "risk": "High",
-                        "description": "ws://localhost:3000/ws/comments allows itself to be embedded in cross-origin iframes (missing X-Frame-Options / CSP).",
-                        "solution": "Set X-Frame-Options: DENY or SAMEORIGIN, or CSP frame-ancestors directive.",
-                        "affected_url": "http://localhost:3000/",
-                        "impact": "Lack of iframe restrictions enables clickjacking and session abuse via embedded WebSocket clients."
-                    },
-                    {
-                        "name": "Mixed Content",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "PostMessage Abuse",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Spoofed URL",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Missing Origin Check",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections from unauthorized origin 'http://malicious-site.com'.",
-                        "solution": "Implement strict Origin header validation (whitelist allowed domains).",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Allows cross-origin attacks, potentially leading to data theft or session hijacking."
-                    },
-                    {
-                        "name": "Error Message Leak",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Server Disclosure",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Invalid Content-Type",
-                        "risk": "Medium",
-                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) serves invalid Content-Type: text/html.",
-                        "solution": "Ensure WebSocket endpoints return appropriate Content-Type or upgrade headers.",
-                        "affected_url": "http://localhost:3000/",
-                        "impact": "Invalid Content-Type can confuse clients or enable XSS attacks."
-                    },
-                    {
-                        "name": "Missing Security Headers",
-                        "risk": "Medium",
-                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) lacks the following headers: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options.",
-                        "solution": "Add missing security headers such as Content-Security-Policy, X-Frame-Options, and Strict-Transport-Security.",
-                        "affected_url": "http://localhost:3000/ws/comments",
-                        "impact": "Missing security headers can allow framing attacks, downgrade vulnerabilities, or mixed content issues."
-                    },
-                    {
-                        "name": "URL Path Traversal",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Query Parameter Flood",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Connection Flood",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments allowed 100 concurrent connections in 0.78s.",
-                        "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
-                    },
-                    {
-                        "name": "Oversized Message",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a 10MB message.",
-                        "solution": "Set a reasonable max message size limit (e.g., 1MB) to prevent buffer overflows.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 96 bytes."
-                    },
-                    {
-                        "name": "Max Connections",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments allows 100 simultaneous connections without restriction.",
-                        "solution": "Enforce a maximum connection limit per client to prevent resource exhaustion.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Excessive connections can lead to server overload and DoS.",
-                        "notes": "100 connections opened successfully. No limit detected."
-                    },
-                    {
-                        "name": "Idle Timeout Abuse",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments allows idle connections to persist for 60 seconds.",
-                        "solution": "Implement an idle timeout policy to close inactive connections.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Idle connections can tie up server resources, enabling DoS."
-                    },
-                    {
-                        "name": "High Compression Ratio",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts highly compressible messages (1MB of 'A').",
-                        "solution": "Limit allowed compression ratio or message size on the server.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "May allow decompression bombs causing memory/CPU exhaustion (DoS vector)."
-                    },
-                    {
-                        "name": "Large Payload Resource Leak",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted repeated large messages without closing.",
-                        "solution": "Set server-side limits for message size and rate. Monitor memory usage.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Excessive memory allocation can exhaust server RAM over time."
-                    },
-                    {
-                        "name": "TCP Half-Open Resource Leak",
-                        "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted hanging TCP connections without timeout.",
-                        "solution": "Use TCP keep-alive and server-side timeout policies.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Leaked descriptors may degrade server over time or cause exhaustion."
-                    },
-                    {
-                        "name": "No Compression Negotiation",
-                        "risk": "Medium",
-                        "description": "WebSocket at ws://localhost:3000/ws/comments may mishandle compression without proper negotiation.",
-                        "solution": "Ensure the server only decompresses messages when permessage-deflate was negotiated.",
-                        "affected_url": "ws://localhost:3000/ws/comments",
-                        "impact": "Improper handling can cause parser crashes or CPU overhead."
-                    },
-                    {
-                        "name": "No Timeout Policy",
-                        "risk": "No"
-                    },
-                    {
-                        "name": "Protocol Fuzzing #1",
-                        "risk": "No",
-                        "payload_name": "Command Injection Simulation"
-                    },
-                    {
                         "name": "Protocol Fuzzing #2",
                         "risk": "No",
-                        "payload_name": "Oversized DoS Message (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'XSS Attempt' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "XSS Attempt"
                     },
                     {
                         "name": "Protocol Fuzzing #3",
                         "risk": "No",
-                        "payload_name": "Path Traversal Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Large Payload for DoS (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Large Payload for DoS (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #4",
                         "risk": "No",
-                        "payload_name": "SQL Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Invalid Binary Frame' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Invalid Binary Frame"
                     },
                     {
                         "name": "Protocol Fuzzing #5",
                         "risk": "No",
-                        "payload_name": "Expression Evaluation Injection"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Command Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Command Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #6",
                         "risk": "No",
-                        "payload_name": "XSS Attempt"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'SQL Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "SQL Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #7",
                         "risk": "No",
-                        "payload_name": "Invalid Binary Frame"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Expression Evaluation Injection' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Expression Evaluation Injection"
                     },
                     {
                         "name": "Protocol Fuzzing #8",
                         "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Null Bytes in JSON String' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Null Bytes in JSON String"
                     },
                     {
                         "name": "Protocol Fuzzing #9",
                         "risk": "No",
-                        "payload_name": "PostMessage Abuse Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Unicode Characters in Payload' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Unicode Characters in Payload"
                     },
                     {
                         "name": "Protocol Fuzzing #10",
                         "risk": "No",
-                        "payload_name": "Large Payload for DoS (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Oversized DoS Message (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Oversized DoS Message (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #11",
                         "risk": "No",
-                        "payload_name": "Malformed JSON"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'Path Traversal Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Path Traversal Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #12",
                         "risk": "No",
-                        "payload_name": "Unicode Characters in Payload"
+                        "description": "WebSocket at ws://localhost:3000/ws/prices handled payload 'PostMessage Abuse Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/prices",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "PostMessage Abuse Simulation"
                     }
                 ],
                 "ws://localhost:3000/ws/notify": [
@@ -2693,7 +2294,7 @@
                     {
                         "name": "Connection Flood",
                         "risk": "High",
-                        "description": "WebSocket at ws://localhost:3000/ws/notify allowed 100 concurrent connections in 0.98s.",
+                        "description": "WebSocket at ws://localhost:3000/ws/notify allowed 100 concurrent connections in 1.42s.",
                         "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
                         "affected_url": "ws://localhost:3000/ws/notify",
                         "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
@@ -2762,62 +2363,701 @@
                     {
                         "name": "Protocol Fuzzing #1",
                         "risk": "No",
-                        "payload_name": "Path Traversal Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Malformed JSON' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Malformed JSON"
                     },
                     {
                         "name": "Protocol Fuzzing #2",
                         "risk": "No",
-                        "payload_name": "Large Payload for DoS (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'XSS Attempt' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "XSS Attempt"
                     },
                     {
                         "name": "Protocol Fuzzing #3",
                         "risk": "No",
-                        "payload_name": "PostMessage Abuse Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Large Payload for DoS (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Large Payload for DoS (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #4",
                         "risk": "No",
-                        "payload_name": "Command Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Invalid Binary Frame' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Invalid Binary Frame"
                     },
                     {
                         "name": "Protocol Fuzzing #5",
                         "risk": "No",
-                        "payload_name": "Malformed JSON"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Command Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Command Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #6",
                         "risk": "No",
-                        "payload_name": "Unicode Characters in Payload"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'SQL Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "SQL Injection Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #7",
                         "risk": "No",
-                        "payload_name": "SQL Injection Simulation"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Expression Evaluation Injection' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Expression Evaluation Injection"
                     },
                     {
                         "name": "Protocol Fuzzing #8",
                         "risk": "No",
-                        "payload_name": "Invalid Binary Frame"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Null Bytes in JSON String' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Null Bytes in JSON String"
                     },
                     {
                         "name": "Protocol Fuzzing #9",
                         "risk": "No",
-                        "payload_name": "Oversized DoS Message (JSON)"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Unicode Characters in Payload' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Unicode Characters in Payload"
                     },
                     {
                         "name": "Protocol Fuzzing #10",
                         "risk": "No",
-                        "payload_name": "XSS Attempt"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Oversized DoS Message (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Oversized DoS Message (JSON)"
                     },
                     {
                         "name": "Protocol Fuzzing #11",
                         "risk": "No",
-                        "payload_name": "Expression Evaluation Injection"
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'Path Traversal Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Path Traversal Simulation"
                     },
                     {
                         "name": "Protocol Fuzzing #12",
                         "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/notify handled payload 'PostMessage Abuse Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/notify",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "PostMessage Abuse Simulation"
+                    }
+                ],
+                "ws://localhost:3000/ws/comments": [
+                    {
+                        "name": "Invalid Port",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Non-WS Scheme",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Omit Sec-WebSocket-Key",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Non-Base64 Sec-WebSocket-Key",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Oversized Sec-WebSocket-Key",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Duplicate Sec-WebSocket-Key",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Missing Sec-WebSocket-Version",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Invalid Sec-WebSocket-Version",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Conflicting Sec-WebSocket-Version",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Wrong Upgrade Header",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Missing Connection Header",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Case-Sensitive Headers",
+                        "risk": "Low",
+                        "description": "Server at localhost:3000 accepted case-sensitive headers.",
+                        "solution": "Ensure case-insensitive header parsing as per RFC.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Inconsistent header parsing can lead to security bypasses."
+                    },
+                    {
+                        "name": "Non-GET Method",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Fake HTTP Status",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Wrong Sec-WebSocket-Accept",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Oversized Headers",
+                        "risk": "Medium",
+                        "description": "Server at localhost:3000 accepted handshake with oversized headers.",
+                        "solution": "Set limits for header size to prevent resource exhaustion.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Oversized headers can cause denial-of-service attacks."
+                    },
+                    {
+                        "name": "Missing Host Header",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted handshake without Host header.",
+                        "solution": "Enforce Host header validation.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Missing Host header can allow domain spoofing."
+                    },
+                    {
+                        "name": "Fake Host Header",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted handshake with incorrect Host header.",
+                        "solution": "Validate Host header to match expected server domain.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Fake Host headers can enable domain spoofing attacks."
+                    },
+                    {
+                        "name": "Multiple Host Headers",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted handshake with multiple Host headers.",
+                        "solution": "Reject requests with duplicate Host headers.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Multiple Host headers can confuse server routing."
+                    },
+                    {
+                        "name": "Long URL Path",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Unicode URL",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "HTTP/0.9 Handshake",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "No Session Cookie",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections without a session cookie.",
+                        "solution": "Require valid session cookies (or tokens) to authenticate WebSocket clients.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Unauthenticated users can establish WebSocket sessions, exposing sensitive data."
+                    },
+                    {
+                        "name": "Expired Cookie",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections with an expired session cookie.",
+                        "solution": "Validate cookie expiration on the server side and reject expired tokens.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Expired sessions may be reused by attackers, leading to unauthorized access."
+                    },
+                    {
+                        "name": "Fake Token",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections with a fake authentication token.",
+                        "solution": "Implement robust token validation (e.g., JWT signature verification, token expiry check, audience validation).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Fake tokens can lead to unauthorized access, impersonation, or escalation."
+                    },
+                    {
+                        "name": "HTTP Session Reuse",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Stale Session Reconnect",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments allows reconnection with same stale session cookie.",
+                        "solution": "Invalidate old session IDs on WebSocket reconnect. Require fresh authentication or refresh token.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Attackers can reuse stolen or outdated session tokens for unauthorized access."
+                    },
+                    {
+                        "name": "Cross-Site Cookie Hijack",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted cross-origin cookies and origin header.",
+                        "solution": "Set SameSite=Strict on cookies and validate the Origin header server-side.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Attackers could hijack sessions via forged WebSocket connections from malicious origins."
+                    },
+                    {
+                        "name": "Missing Authentication",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments allows unauthenticated connections and responds with data.",
+                        "solution": "Require authentication (e.g., JWT, API keys) for WebSocket connections.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Unauthorized access to sensitive data or functionality."
+                    },
+                    {
+                        "name": "Invalid Subprotocol",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments negotiated invalid subprotocol: 'invalid..protocol'.",
+                        "solution": "Reject malformed or unsupported subprotocol values during handshake.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Invalid subprotocols can lead to parser confusion, downgrade attacks, or misbehavior."
+                    },
+                    {
+                        "name": "Conflicting Subprotocols",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Unaccepted Subprotocol",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments negotiated unadvertised subprotocol 'unadvertised_protocol'.",
+                        "solution": "Only negotiate subprotocols explicitly supported by the server.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Unadvertised subprotocols can allow unintended parsing or behavior (e.g., logic injection)."
+                    },
+                    {
+                        "name": "Fake Extension",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted spoofed extension.",
+                        "solution": "Validate Sec-WebSocket-Extensions header against supported values.",
+                        "affected_host": "localhost:3000/ws/comments",
+                        "impact": "Fake extensions can lead to parser confusion or misbehavior."
+                    },
+                    {
+                        "name": "Conflicting Extensions",
+                        "risk": "Medium",
+                        "description": "Server at localhost:3000 accepted conflicting extensions.",
+                        "solution": "Reject requests with duplicate or conflicting extensions.",
+                        "affected_host": "localhost:3000",
+                        "impact": "Conflicting extensions can cause protocol errors."
+                    },
+                    {
+                        "name": "Spoofed Connection Header",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted spoofed Connection header.",
+                        "solution": "Strictly validate Connection header to be exactly \"Upgrade\".",
+                        "affected_host": "localhost:3000/ws/comments",
+                        "impact": "Spoofed headers can bypass upgrade validation or confuse reverse proxies."
+                    },
+                    {
+                        "name": "HTTP/1.0 Downgrade",
+                        "risk": "High",
+                        "description": "Server at localhost:3000 accepted HTTP/1.0 WebSocket handshake.",
+                        "solution": "Only allow WebSocket upgrades over HTTP/1.1 or newer.",
+                        "affected_host": "localhost:3000/ws/comments",
+                        "impact": "Accepting HTTP/1.0 WebSocket handshakes can lead to protocol confusion and security issues."
+                    },
+                    {
+                        "name": "TLS Downgrade",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Weak TLS Ciphers",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Certificate Mismatch",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Undefined Opcode",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with undefined opcode 0x3.",
+                        "solution": "Reject frames with undefined opcodes.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Undefined opcodes can cause unexpected server behavior."
+                    },
+                    {
+                        "name": "Reserved Opcode",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with reserved opcode 0xB.",
+                        "solution": "Reject frames with reserved opcodes (0x3-0x7, 0xB-0xF).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Reserved opcodes can lead to protocol errors."
+                    },
+                    {
+                        "name": "Zero-Length Fragment",
+                        "risk": "Low",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted zero-length fragments and responded unexpectedly.",
+                        "solution": "Reject or limit incomplete fragmented messages.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Zero-length fragments can cause server confusion or buffer exhaustion."
+                    },
+                    {
+                        "name": "Invalid Payload Length",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frame with declared payload length 10 but sent only 4 bytes.",
+                        "solution": "Validate payload length matches actual data.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Invalid lengths can cause buffer overflows or crashes."
+                    },
+                    {
+                        "name": "Negative Payload Length",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted forged extended payload length (0x8000000000000001).",
+                        "solution": "Validate payload length fields and reject extreme or invalid values.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Signed overflows in length handling can lead to crashes or memory corruption."
+                    },
+                    {
+                        "name": "Mismatched Payload",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted frames with mismatched lengths.",
+                        "solution": "Ensure payload lengths match.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Can lead to parsing errors, decoder crashes, or type confusion."
+                    },
+                    {
+                        "name": "Invalid Masking Key",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a frame with invalid masking key pattern: All-zero.",
+                        "solution": "Enforce strict validation of client masking keys per RFC 6455.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Improper masking validation may cause data integrity issues or security flaws."
+                    },
+                    {
+                        "name": "Unmasked Client Frame",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted an unmasked client frame.",
+                        "solution": "Require masking for all client-to-server frames per RFC 6455.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Unmasked frames can be intercepted or misused in shared environments."
+                    },
+                    {
+                        "name": "Invalid RSV Bits",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a frame with invalid RSV1 bit set.",
+                        "solution": "Reject non-zero RSV bits unless explicitly negotiated via extension.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "May trigger unintended behaviors, desyncs, or extension misinterpretation."
+                    },
+                    {
+                        "name": "Oversized Control Frame",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a ping control frame with 126-byte payload.",
+                        "solution": "Reject control frames larger than 125 bytes as per RFC 6455.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Oversized control frames can crash or desync the server."
+                    },
+                    {
+                        "name": "Non-UTF-8 Text",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame with invalid UTF-8 bytes.",
+                        "solution": "Ensure strict UTF-8 validation of text frames.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Improper decoding may cause crashes, parser confusion, or security flaws."
+                    },
+                    {
+                        "name": "Null Bytes in Text",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame containing null bytes.",
+                        "solution": "Validate and sanitize text frames for embedded nulls. Avoid C-style string truncation risks.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Null bytes may cause truncation, spoofing, or parsing logic issues in downstream systems."
+                    },
+                    {
+                        "name": "Binary as Text",
+                        "risk": "Low",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a text frame with non-UTF-8 binary data.",
+                        "solution": "Validate UTF-8 compliance in all text frames as per RFC 6455.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Binary data in text frames can crash UTF-8 decoders or lead to logic bugs in logging, auth, or sanitization layers."
+                    },
+                    {
+                        "name": "Text as Binary",
+                        "risk": "Low",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted UTF-8 text sent in a binary frame.",
+                        "solution": "Handle binary and text frames with separate logic as per RFC 6455.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Frame type confusion may lead to parsing errors, logging bugs, or misrouted messages."
+                    },
+                    {
+                        "name": "Invalid Close Code",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a close frame with invalid code 999.",
+                        "solution": "Close codes must conform to RFC 6455 (valid: 1000-1015, 3000-4999).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Invalid codes may cause parser errors or incorrect shutdown logic."
+                    },
+                    {
+                        "name": "Early Close Frame",
+                        "risk": "Low",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted an early close frame before any data was exchanged.",
+                        "solution": "Gracefully handle close frames sent immediately after handshake.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Unexpected early closes may cause resource leaks or state desyncs if not handled correctly."
+                    },
+                    {
+                        "name": "No Close Frame",
+                        "risk": "Low",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled abrupt TCP closure and allowed clean reconnection.",
+                        "solution": "Ensure that server detects and cleans up on ungraceful disconnects.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Abrupt closures (without a close frame) may leave sessions open or leak memory."
+                    },
+                    {
+                        "name": "Long Close Reason",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted close frame with long reason (123 bytes).",
+                        "solution": "Enforce strict limits on close reason size (\u2264123 bytes).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Overly long reasons may stress server logs, cause parsing failures, or lead to DoS."
+                    },
+                    {
+                        "name": "Missing CORS Headers",
+                        "risk": "High",
+                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) lacks proper CORS headers.",
+                        "solution": "Implement proper CORS headers to restrict cross-origin access.",
+                        "affected_url": "http://localhost:3000/",
+                        "impact": "Missing or misconfigured CORS headers can lead to unauthorized cross-origin requests."
+                    },
+                    {
+                        "name": "Cross-Origin Iframe",
+                        "risk": "High",
+                        "description": "ws://localhost:3000/ws/comments allows itself to be embedded in cross-origin iframes (missing X-Frame-Options / CSP).",
+                        "solution": "Set X-Frame-Options: DENY or SAMEORIGIN, or CSP frame-ancestors directive.",
+                        "affected_url": "http://localhost:3000/",
+                        "impact": "Lack of iframe restrictions enables clickjacking and session abuse via embedded WebSocket clients."
+                    },
+                    {
+                        "name": "Mixed Content",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "PostMessage Abuse",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Spoofed URL",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Missing Origin Check",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts connections from unauthorized origin 'http://malicious-site.com'.",
+                        "solution": "Implement strict Origin header validation (whitelist allowed domains).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Allows cross-origin attacks, potentially leading to data theft or session hijacking."
+                    },
+                    {
+                        "name": "Error Message Leak",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Server Disclosure",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Invalid Content-Type",
+                        "risk": "Medium",
+                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) serves invalid Content-Type: text/html.",
+                        "solution": "Ensure WebSocket endpoints return appropriate Content-Type or upgrade headers.",
+                        "affected_url": "http://localhost:3000/",
+                        "impact": "Invalid Content-Type can confuse clients or enable XSS attacks."
+                    },
+                    {
+                        "name": "Missing Security Headers",
+                        "risk": "Medium",
+                        "description": "WebSocket endpoint ws://localhost:3000/ws/comments (HTTP equivalent) lacks the following headers: Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options.",
+                        "solution": "Add missing security headers such as Content-Security-Policy, X-Frame-Options, and Strict-Transport-Security.",
+                        "affected_url": "http://localhost:3000/ws/comments",
+                        "impact": "Missing security headers can allow framing attacks, downgrade vulnerabilities, or mixed content issues."
+                    },
+                    {
+                        "name": "URL Path Traversal",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Query Parameter Flood",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Connection Flood",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments allowed 100 concurrent connections in 1.43s.",
+                        "solution": "Enforce per-IP connection limits and rate limiting to prevent abuse.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Connection floods can exhaust server memory and sockets, causing DoS."
+                    },
+                    {
+                        "name": "Oversized Message",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted a 10MB message.",
+                        "solution": "Set a reasonable max message size limit (e.g., 1MB) to prevent buffer overflows.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Large payloads like 10MB can cause memory exhaustion or DoS. Server echoed 96 bytes."
+                    },
+                    {
+                        "name": "Max Connections",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments allows 100 simultaneous connections without restriction.",
+                        "solution": "Enforce a maximum connection limit per client to prevent resource exhaustion.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Excessive connections can lead to server overload and DoS.",
+                        "notes": "100 connections opened successfully. No limit detected."
+                    },
+                    {
+                        "name": "Idle Timeout Abuse",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments allows idle connections to persist for 60 seconds.",
+                        "solution": "Implement an idle timeout policy to close inactive connections.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Idle connections can tie up server resources, enabling DoS."
+                    },
+                    {
+                        "name": "High Compression Ratio",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepts highly compressible messages (1MB of 'A').",
+                        "solution": "Limit allowed compression ratio or message size on the server.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "May allow decompression bombs causing memory/CPU exhaustion (DoS vector)."
+                    },
+                    {
+                        "name": "Large Payload Resource Leak",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted repeated large messages without closing.",
+                        "solution": "Set server-side limits for message size and rate. Monitor memory usage.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Excessive memory allocation can exhaust server RAM over time."
+                    },
+                    {
+                        "name": "TCP Half-Open Resource Leak",
+                        "risk": "High",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments accepted hanging TCP connections without timeout.",
+                        "solution": "Use TCP keep-alive and server-side timeout policies.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Leaked descriptors may degrade server over time or cause exhaustion."
+                    },
+                    {
+                        "name": "No Compression Negotiation",
+                        "risk": "Medium",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments may mishandle compression without proper negotiation.",
+                        "solution": "Ensure the server only decompresses messages when permessage-deflate was negotiated.",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Improper handling can cause parser crashes or CPU overhead."
+                    },
+                    {
+                        "name": "No Timeout Policy",
+                        "risk": "No"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #1",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Malformed JSON' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Malformed JSON"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #2",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'XSS Attempt' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "XSS Attempt"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #3",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Large Payload for DoS (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Large Payload for DoS (JSON)"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #4",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Invalid Binary Frame' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Invalid Binary Frame"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #5",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Command Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Command Injection Simulation"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #6",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'SQL Injection Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "SQL Injection Simulation"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #7",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Expression Evaluation Injection' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Expression Evaluation Injection"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #8",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Null Bytes in JSON String' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
                         "payload_name": "Null Bytes in JSON String"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #9",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Unicode Characters in Payload' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Unicode Characters in Payload"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #10",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Oversized DoS Message (JSON)' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Oversized DoS Message (JSON)"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #11",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'Path Traversal Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "Path Traversal Simulation"
+                    },
+                    {
+                        "name": "Protocol Fuzzing #12",
+                        "risk": "No",
+                        "description": "WebSocket at ws://localhost:3000/ws/comments handled payload 'PostMessage Abuse Simulation' without process crash (stable response).",
+                        "affected_url": "ws://localhost:3000/ws/comments",
+                        "impact": "Endpoint remained available after malformed input.",
+                        "payload_name": "PostMessage Abuse Simulation"
                     }
                 ]
             },
@@ -2828,7 +3068,7 @@
                 "Transport Security & Encryption": 8,
                 "Payload Framing & Messaging Semantics": 90,
                 "Origin Policy & Cross-Origin Enforcement": 14,
-                "Application-Layer Logic & Misconfigurations": 11,
+                "Application-Layer Logic & Misconfigurations": 10,
                 "DoS, Compression & Resource Limits": 40,
                 "Protocol Fuzzing": 0
             }
@@ -2841,7 +3081,7 @@
         "Transport Security & Encryption": 8,
         "Payload Framing & Messaging Semantics": 90,
         "Origin Policy & Cross-Origin Enforcement": 14,
-        "Application-Layer Logic & Misconfigurations": 11,
+        "Application-Layer Logic & Misconfigurations": 10,
         "DoS, Compression & Resource Limits": 40,
         "Protocol Fuzzing": 0
     }

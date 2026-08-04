@@ -270,18 +270,18 @@ ATTACK_LIST = [
     "No Timeout Policy",                     # 78
 
     # 9. Protocol Fuzzing
-    "Protocol Fuzzing #1",                      # 79
-    "Protocol Fuzzing #2",                      # 80
-    "Protocol Fuzzing #3",                      # 81
-    "Protocol Fuzzing #4",                      # 82
-    "Protocol Fuzzing #5",                      # 83
-    "Protocol Fuzzing #6",                      # 84
-    "Protocol Fuzzing #7",                      # 85
-    "Protocol Fuzzing #8",                      # 86
-    "Protocol Fuzzing #9",                      # 87
-    "Protocol Fuzzing #10",                     # 88
-    "Protocol Fuzzing #11",                     # 89
-    "Protocol Fuzzing #12",                     # 90
+    "Malformed JSON",                      # 79
+    "XSS Attempt",                      # 80
+    "Large Payload for DoS (JSON)",                      # 81
+    "Invalid Binary Frame",                      # 82
+    "Command Injection Simulation",                      # 83
+    "SQL Injection Simulation",                      # 84
+    "Expression Evaluation Injection",                      # 85
+    "Null Bytes in JSON String",                      # 86
+    "Unicode Characters in Payload",                      # 87
+    "Oversized DoS Message (JSON)",                     # 88
+    "Path Traversal Simulation",                     # 89
+    "PostMessage Abuse Simulation",                     # 90
 ]
 
 

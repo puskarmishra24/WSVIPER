@@ -37,7 +37,14 @@ def attack_website(websocket_urls):
     {"name": "Unicode Characters in Payload", "payload": {"data": "🚀🌟💥"}},
     {"name": "Oversized DoS Message (JSON)", "payload": {"message": "B" * 2000000}},
     {"name": "Path Traversal Simulation", "payload": {"path": "/../../etc/passwd"}},
-    {"name": "PostMessage Abuse Simulation", "payload": {"message": "window.postMessage('malicious','*')"}}
+    {"name": "PostMessage Abuse Simulation", "payload": {"message": "window.postMessage('malicious','*')"}},
+    # {"name": "Chat Auth Attempt", "payload": {"type": "auth", "token": "token_guest_demo", "username": "<script>alert(1)</script>"}},
+    # {"name": "Chat XSS Message", "payload": {"type": "message", "text": "<img src=x onerror=alert(1)>"}},
+    # {"name": "Feed Unauthorized Post", "payload": {"type": "post", "username": "attacker", "text": "<script>alert(1)</script>"}},
+    # {"name": "Notify Push Attempt", "payload": {"type": "push", "icon": "📢", "text": "<script>alert(1)</script>"}},
+    # {"name": "Prices Eval Injection", "payload": {"type": "calculate", "expression": "process.env"}},
+    # {"name": "Comments Mass Assignment", "payload": {"type": "set_profile", "data": {"role": "admin", "verified": True, "username": "attacker"}}},
+    # {"name": "Comments XSS", "payload": {"type": "comment", "text": "<script>alert(1)</script>"}}
 ]
     print(colored("Starting WebSocket tests...", "yellow"))
     vulnerabilities = perform_websocket_tests(websocket_urls, websocket_payloads)
@@ -171,6 +178,61 @@ def test_authentication(ws_url):
     except WebSocketException as e:
         return {'name':'Missing Authentication','risk':'No'}
 
+PAYLOAD_CATEGORIES = {
+    "Malformed JSON": "protocol",
+    "XSS Attempt": "xss",
+    "Large Payload for DoS (JSON)": "dos",
+    "Invalid Binary Frame": "protocol",
+    "Command Injection Simulation": "injection",
+    "SQL Injection Simulation": "injection",
+    "Expression Evaluation Injection": "injection",
+    "Null Bytes in JSON String": "protocol",
+    "Unicode Characters in Payload": "benign",
+    "Oversized DoS Message (JSON)": "dos",
+    "Path Traversal Simulation": "injection",
+    "PostMessage Abuse Simulation": "xss",
+}
+ 
+REJECTION_TOKENS = (
+    'error',
+    'invalid',
+    'bad json',
+    'unsupported',
+    'read-only',
+    'reject',
+)
+ 
+ 
+def _payload_raw_text(payload):
+    """Best-effort string form of the original payload, for reflection checks."""
+    if isinstance(payload, dict):
+        # pull out the actual "value" fields we care about, e.g. the injection string itself
+        return " ".join(str(v) for v in payload.values())
+    if isinstance(payload, bytes):
+        return payload.decode(errors="ignore")
+    return str(payload)
+ 
+ 
+def _classify_accepted(category, reflected):
+    """Risk level when the server processed the payload without rejecting it."""
+    if category == "injection":
+        return "High"          # server ran/parsed attacker-controlled query/command/path unchecked
+    if category == "xss":
+        return "High" if reflected else "Medium"
+    if category == "dos":
+        return "Medium"        # accepted; would need timing/memory follow-up to confirm High
+    if category == "protocol":
+        return "Low"           # parser leniency, not directly exploitable on its own
+    return "No"                # benign category
+ 
+ 
+def _classify_soft_signal(category):
+    """Risk level for timeouts / defensive closes (no confirmed processing)."""
+    if category == "dos":
+        return "Low"           # hang on an oversized payload is a mild DoS signal
+    return "No"
+
+ 
 def test_fuzzing(ws_url, payload, name):
     """Perform protocol fuzzing with payloads."""
     try:
@@ -190,38 +252,50 @@ def test_fuzzing(ws_url, payload, name):
             response = ws.recv()
             ws.close()
             if response:
+                lowered = str(response).lower()
+                rejected = any(token in lowered for token in (
+                    'error',
+                    'invalid',
+                    'bad json',
+                    'unsupported',
+                    'read-only',
+                    'reject'
+                ))
+                risk = 'No' if rejected else 'Low'
                 return {
-                    'name': 'Protocol Fuzzing',
-                    'risk': 'Medium',
-                    'description': f"WebSocket at {ws_url} responded to malformed payload type: {name}.",
-                    'solution': 'Implement robust input validation and reject malformed messages.',
+                    'name': name,
+                    'risk': risk,
+                    'description': (
+                        f"WebSocket at {ws_url} {'rejected' if rejected else 'accepted'} payload '{name}'."
+                    ),
                     'affected_url': ws_url,
-                    'impact': 'Malformed messages may lead to unsafe behavior or data leaks.'
+                    'impact': 'Endpoint remained available after malformed input.' if rejected else 'Payload reached application logic without an explicit rejection.'
                 }
-            else:
-                return {
-                    'name': 'Protocol Fuzzing',
-                    'risk': 'No'
-                }
+            return {
+                'name': name,
+                'risk': 'Low',
+                'description': f"WebSocket at {ws_url} produced no immediate response for payload '{name}'.",
+                'affected_url': ws_url,
+                'impact': 'Silent handling can hide parser or application-level issues.'
+            }
         except WebSocketException:
             ws.close()
             return {
-                'name': 'Protocol Fuzzing',
+                'name': name,
                 'risk': 'Low',
                 'description': f"WebSocket at {ws_url} closed connection on malformed payload: {name}.",
-                'solution': 'Ensure server logs and rejects invalid frames correctly.',
                 'affected_url': ws_url,
-                'impact': 'Likely a safe defensive measure, but review logs to confirm.'
+                'impact': 'Defensive close is treated as a pass when process remains stable.'
             }
     except (WebSocketException, ConnectionError, OSError, ssl.SSLError, socket.error):
         # Connection could not be established or was reset by the server.
         return {
-            'name': 'Protocol Fuzzing',
+            'name': name,
             'risk': 'No'
         }
     except Exception:
         return {
-            'name': 'Protocol Fuzzing',
+            'name': name,
             'risk': 'No'
         }
   
@@ -2705,7 +2779,7 @@ def perform_websocket_tests(websocket_urls, payloads):
             if not isinstance(result, dict):
                 return
             vulnerabilities.append(result)
-            if category and result.get("risk") != "No":
+            if category and category in local_di and result.get("risk") != "No":
                 local_di[category] += 1
 
         def run_safe(test_name, func, args, category):
@@ -2756,16 +2830,21 @@ def perform_websocket_tests(websocket_urls, payloads):
             for test_func in ws_dos_tests:
                 run_safe(f"{test_func.__name__}", test_func, (ws_url,), "DoS, Compression & Resource Limits")
 
+                        
             for idx, item in enumerate(payloads, 1):
-                test_name = item.get("name", f"Protocol Fuzzing #{idx}")
+                payload_name = item.get("name", f"Protocol Fuzzing #{idx}")
                 try:
-                    res = test_fuzzing(ws_url, item["payload"], test_name)
+                    res = test_fuzzing(ws_url, item["payload"], payload_name)
                     if isinstance(res, dict):
                         res = dict(res)
-                        res["name"] = test_name
-                    append_result(test_name, res)
+                        res["name"] = payload_name
+                        res["payload_name"] = payload_name
+                    append_result(payload_name, res)
                 except Exception as e:
-                    print(f"[!] {ws_url} -> {test_name} failed: {e}")
+                    print(f"[!] {ws_url} -> {payload_name} failed: {e}")
+
+
+
         except Exception as e:
            
             print(f"[!] Error while testing {ws_url}: {e}")
